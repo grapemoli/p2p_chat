@@ -8,6 +8,6 @@ Fork or clone the project.
 
 To install dependencies, run
 ```pip install -r requirements.txt```
-from the main directory.
+from the ```/src``` directory.
 
-Once all dependencies are installed, run the interpreter from the main directory.
+Once all dependencies are installed, run the interpreter from the ```/src``` directory.
