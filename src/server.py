@@ -11,6 +11,66 @@ server.listen()
 clients = []
 usernames = []
 
+#list holds all accounts
+allUsers = []
+
+#list holds all dms
+DMs = []
+
+class Account(object):
+    def __init__(self, username, password):
+        #username to identify users
+        self.username_ = username
+
+        #password for each user. may change
+        self.password_ = password
+
+        #ID of each user.
+        #keeps track of messages when username is changed
+        #userID should never change
+        #assign ID of last user + 1
+        self.userID = len(allUsers)
+        allUsers.append(self)
+
+    def getUsername(self):
+        return self.username_
+    
+    def getPassword(self):
+        return self.password_
+    
+    def getUserID(self):
+        return self.userID
+    
+#holds dm and message history between 2 users
+class DM(object):
+    def __init__(self, user1, user2):
+        #set the userPair
+        #pair of IDs (ints) in a tuple (immutable)
+        self.userPair_ = {user1, user2}
+
+        #initialize the messages
+        self.messages_ = []
+
+    def newMessage(self, senderID, message):
+        self.messages_.append(Message(senderID, message))
+
+    
+#structure simply holds senderID and the message sent
+class Message(object):
+    def __init__(self, senderID, message):
+        #set senderID (int)
+        self.senderID_ = senderID
+
+        #set message (string)
+        self.message_ = message
+
+    def getSenderID(self):
+        return self.senderID_
+    
+    def getMessage(self):
+        return self.message_
+
+
 def broadcast(message):
     for client in clients:
         client.send(message)
