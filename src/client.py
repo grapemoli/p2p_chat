@@ -1,5 +1,6 @@
 import socket
 import threading
+import pickle
 import sys
 from PyQt6.QtWidgets import *
 
@@ -69,7 +70,8 @@ class Client (QMainWindow):
     def write (self):
         if self.messageTextBox.text() != "":
             message = f'{self.username}: {self.messageTextBox.text ()}'
-            self.client.send (message.encode ('ascii'))
+            toSend = pickle.dumps(Message("", message))
+            self.client.send (toSend)
             self.update_chat_display ()
             self.messageTextBox.clear ()
 
@@ -84,3 +86,15 @@ class Client (QMainWindow):
 
         write_thread = threading.Thread (target=self.write)
         write_thread.start ()
+
+class Message(object):
+    def __init__(self, type, contents):
+        #initialize members
+        self.type_ = type
+        self.contents_ = contents
+
+    def getType(self):
+        return self.type_
+    
+    def getContents(self):
+        return self.contents_

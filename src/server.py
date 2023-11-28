@@ -80,7 +80,7 @@ def handle(client):
         try:
             #what do we do with the client's message?
             message = pickle.loads(client.recv(1024))
-            msgContents = message.getContents.split(',')
+            msgContents = message.getContents().split(',')
 
             if (message.getType() == "LoginReq"):
                 for account in allUsers:
@@ -99,7 +99,7 @@ def handle(client):
                 client.send(confirmation)
                         
 
-            broadcast(message)
+            broadcast(msgContents[0].encode('ascii'))
         except:
             index = connectedClients.index(client)
             connectedClients.remove(client)
