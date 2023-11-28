@@ -1,4 +1,5 @@
 import socket
+import pickle
 import threading
 
 host = '0.0.0.0'
@@ -8,7 +9,7 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((host, port))
 server.listen()
 
-clients = []
+connectedClients = []
 usernames = []
 
 #list holds all accounts
@@ -52,37 +53,55 @@ class DM(object):
         self.messages_ = []
 
     def newMessage(self, senderID, message):
-        self.messages_.append(Message(senderID, message))
-
+        self.messages_.append(Message("Text", message))
     
-#structure simply holds senderID and the message sent
 class Message(object):
-    def __init__(self, senderID, message):
-        #set senderID (int)
-        self.senderID_ = senderID
+    def __init__(self, type, contents):
+        #initialize members
+        self.type_ = type
+        self.contents_ = contents
 
-        #set message (string)
-        self.message_ = message
-
-    def getSenderID(self):
-        return self.senderID_
+    def getType(self):
+        return self.type_
     
-    def getMessage(self):
-        return self.message_
+    def getContents(self):
+        return self.contents_
 
 
 def broadcast(message):
-    for client in clients:
+    for client in connectedClients:
         client.send(message)
 
+#runs in a thread, constantly checks if the client has sent a new message
 def handle(client):
+    user = None
     while True:
         try:
-            message = client.recv(1024)
+            #what do we do with the client's message?
+            message = pickle.loads(client.recv(1024))
+            msgContents = message.getContents.split(',')
+
+            if (message.getType() == "LoginReq"):
+                for account in allUsers:
+                    if ((account.getUsername() == msgContents[0]) and (account.getPassword() == msgContents[1])):
+                        #successful sign in
+                        user = account
+                        confirmation = pickle.dumps(Message("LoginConfirm", ""))
+                        client.send(confirmation)
+                    else:
+                        #bad username or password
+                        print("sign in fail")
+
+            if (message.getType() == "CreateAccount"):
+                allUsers.append(Account(msgContents[0], msgContents[1]))
+                confirmation = pickle.dumps(Message("CreateConfirm", ""))
+                client.send(confirmation)
+                        
+
             broadcast(message)
         except:
-            index = clients.index(client)
-            clients.remove(client)
+            index = connectedClients.index(client)
+            connectedClients.remove(client)
             client.close()
             username = usernames[index]
             print(f'{username} lost connection.')
@@ -90,6 +109,8 @@ def handle(client):
             usernames.remove(username)
             break
 
+#constantly checks for new connections.
+#when a new connection is made, start a thread for that client
 def receive():
     while True:
         client, address = server.accept()
@@ -98,7 +119,7 @@ def receive():
         client.send('NAME_QUERY'.encode('ascii'))
         username = client.recv(1024).decode('ascii')
         usernames.append(username)
-        clients.append(client)
+        connectedClients.append(client)
 
         print(f'Username of new client is {username}.')
         broadcast(f'   -->{username} has joined the chat.'.encode('ascii'))
