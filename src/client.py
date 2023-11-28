@@ -5,9 +5,9 @@ from PyQt6.QtWidgets import *
 
 
 class Client (QMainWindow):
-    username = "grace"
+    username = "grace"                                    # TODO: configure this on the login screen
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect (('127.0.0.1', 25565))
+    client.connect(('50.90.134.19', 25565))
 
     def __init__ (self):
         #self.username = input ('What is your username? ')  # TODO: make this the first thing that appears
