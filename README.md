@@ -10,4 +10,10 @@ To install dependencies, run
 ```pip install -r requirements.txt```
 from the ```/src``` directory.
 
-Once all dependencies are installed, run the interpreter from the ```/src``` directory.
+Once all dependencies are installed, go to the ```/src``` directory. 
+
+### Windows
+Run ```python main.py```.
+
+### Mac
+If Python were downloaded by HomeBrew, run ```python3 main.py```.

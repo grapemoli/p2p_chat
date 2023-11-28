@@ -42,7 +42,6 @@ def receive ():
 
         print (f'Username of new client is {username}.')
         broadcast (f'   -->{username} has joined the chat.'.encode ('ascii'))
-        client.send ('Connected to the server.'.encode ('ascii'))
 
         thread = threading.Thread (target = handle, args = (client,))
         thread.start ()

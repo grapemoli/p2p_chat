@@ -1,14 +1,50 @@
 import socket
 import threading
+import sys
+from PyQt6.QtWidgets import *
 
 
-class Client:
-    username = ""
+class Client (QMainWindow):
+    username = "grace"
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect (('50.90.134.19', 25565))
+    client.connect (('127.0.0.1', 25565))
 
     def __init__ (self):
-        self.username = input ('What is your username? ')
+        #self.username = input ('What is your username? ')  # TODO: make this the first thing that appears
+        super().__init__ ()
+
+        # Set the window properties (title and initial size)
+        self.setWindowTitle ("Chat Bocks")
+        self.setGeometry (100, 100, 400, 300)  # (x, y, width, height)
+
+        # Main window
+        mainWindow = QWidget ()
+        self.setCentralWidget (mainWindow)
+
+        # Arrangement of the widgets
+        layout = QGridLayout ()
+
+        # Displaying live messages
+        self.chatBox = QLabel ()
+        self.chatBox.setWordWrap (True)  # Wrap long messages
+        layout.addWidget (self.chatBox)
+
+        # Inline: text box, enter button
+        # messageLayout = QGridLayout ()
+        self.messageTextBox = QLineEdit ()
+        self.messageTextBox.font ().setPointSize(18)
+        self.messageTextBox.setPlaceholderText ("Type your message...")
+        self.messageTextBox.returnPressed.connect (self.write)
+        self.sendButton = QPushButton ("Enter")
+        # messageLayout.addWidget (self.messageInput)
+        # messageLayout.addWidget (self.sendButton)
+        layout.addWidget (self.messageTextBox)
+
+        # Set the layout for the central widget
+        mainWindow.setLayout (layout)
+
+        # Initialize chat history
+        self.chatHistory = []
 
     def receive (self):
         while True:
@@ -17,16 +53,26 @@ class Client:
                 if message == 'NAME_QUERY':
                     self.client.send (self.username.encode ('ascii'))
                 else:
-                    print(message)
+                    # Append to the chat history
+                    if (message != ""):
+                        self.chatHistory.append (message)
+                        self.update_chat_display ()
             except:
                 print ("Error")
-                self.client.close
+                self.client.close ()
                 break
 
     def write (self):
-        while True:
-            message = f'{self.username}: {input ("")}'
+        if self.messageTextBox.text() != "":
+            message = f'{self.username}: {self.messageTextBox.text ()}'
             self.client.send (message.encode ('ascii'))
+            self.update_chat_display ()
+            self.messageTextBox.clear ()
+
+    def update_chat_display (self):
+        # Display the chat history in the QLabel
+        chat_text = "\n".join (self.chatHistory)
+        self.chatBox.setText (chat_text)
 
     def start (self):
         receive_thread = threading.Thread (target=self.receive)
