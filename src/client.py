@@ -30,15 +30,19 @@ class Client (QMainWindow):
         layout.addWidget (self.chatBox)
 
         # Inline: text box, enter button
-        # messageLayout = QGridLayout ()
+        messageLayout = QGridLayout ()
         self.messageTextBox = QLineEdit ()
         self.messageTextBox.font ().setPointSize(18)
         self.messageTextBox.setPlaceholderText ("Type your message...")
         self.messageTextBox.returnPressed.connect (self.write)
-        self.sendButton = QPushButton ("Enter")
-        # messageLayout.addWidget (self.messageInput)
-        # messageLayout.addWidget (self.sendButton)
+        self.sendButton = QPushButton ()
+        self.sendButton.setText ("Enter")       # TODO: use grid properties to align in a line
+        #self.sendButton.clicked.connect (self.write)
+        #messageLayout.addWidget (self.messageTextBox, 0, 0, 0, 0)
+        #messageLayout.addWidget (self.sendButton, 0, 0, 0, 1)
         layout.addWidget (self.messageTextBox)
+        layout.addWidget (self.sendButton)
+        #layout.addWidget (messageLayout)
 
         # Set the layout for the central widget
         mainWindow.setLayout (layout)
