@@ -72,9 +72,10 @@ def handle (client):
             message = pickle.loads (client.recv (1024))
             msgContents = message.getContents ().split (',')
 
-            print (msgContents[1])
-
             # Different types of messages require different methods of handling.
+            if message.getType () == "":
+                print (message.getContents())
+
             if message.getType () == "LoginReq":
                 login = False
                 accountExists = False
@@ -91,8 +92,7 @@ def handle (client):
                         index = connectedClients.index (client)
                         usernames[index] = account.getUsername ()
 
-                        broadcastObj = pickle.dumps (Message ("", f'   -->{account.getUsername()} has joined the chat.'))
-                        broadcast (broadcastObj)
+                        broadcast (f'   -->{account.getUsername()} has joined the chat.')
 
                         ackObj = pickle.dumps (Message ("ACK", "Connected to server."))
                         client.send (ackObj)
@@ -141,8 +141,8 @@ def handle (client):
             username = usernames[index]
 
             print (f'{username} lost connection.')
-            leftChatObj = pickle.dumps (Message ("", f'{username} left the chat'))
-            broadcast (leftChatObj)
+
+            broadcast (f'{username} left the chat')
 
             usernames.remove (username)
 

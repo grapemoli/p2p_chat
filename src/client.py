@@ -22,9 +22,9 @@ class Client (QMainWindow):
 
         # Main window
         self.mainWindow = QWidget ()        # mainWindow holds switchWindow, who holds windowList and the stack of other windows
-        self.setCentralWidget(self.mainWindow)
 
         self.stack = QStackedLayout ()
+        self.mainWindow.setLayout (self.stack)
 
 
         # Create other windows & put them in the list to keep track of them.
@@ -74,10 +74,10 @@ class Client (QMainWindow):
         # done here because the UI needs to be loaded before it can reference another UI; however,
         # the login and add account windows have buttons that point to each other--a circular need.
         # So, we make the window-changing buttons in their respective UI methods, but configure here.
-        self.toAddAccountButton.clicked.connect (lambda: self.display(1))
+        self.toAddAccountButton.clicked.connect (lambda: self.display (1))
         self.toAddAccountButton.clicked.connect (lambda: self.newUsernameInput.setText(''))
         self.toAddAccountButton.clicked.connect (lambda: self.newPasswordInput.setText(''))
-        self.toLoginButton.clicked.connect (lambda: self.display(0))
+        self.toLoginButton.clicked.connect (lambda: self.display (0))
         self.toLoginButton.clicked.connect (lambda: self.usernameInput.clear())
         self.toLoginButton.clicked.connect (lambda: self.passwordInput.clear())
 
@@ -91,14 +91,14 @@ class Client (QMainWindow):
         # Username input.
         usernameLabel = QLabel ('<font size="4"> Username </font>')
         self.usernameInput = QLineEdit()
-        self.usernameInput.setPlaceholderText ('Please enter your username')
+        self.usernameInput.setPlaceholderText ('Please enter a username')
         layout.addWidget (usernameLabel, 0, 0)
         layout.addWidget (self.usernameInput, 0, 1)
 
         # Password input.
         passwordLabel = QLabel ('<font size="4"> Password </font>')
         self.passwordInput = QLineEdit ()
-        self.passwordInput.setPlaceholderText( 'Please enter your password')
+        self.passwordInput.setPlaceholderText( 'Please enter a password')
         layout.addWidget (passwordLabel, 1, 0)
         layout.addWidget (self.passwordInput, 1, 1)
 
@@ -137,11 +137,11 @@ class Client (QMainWindow):
         layout.addWidget (self.newPasswordInput, 1, 1)
 
         # Register Button or Enter action configuration.
-        self.newUsernameInput.returnPressed.connect (self.addAccount)
-        self.newPasswordInput.returnPressed.connect (self.addAccount)
+        self.newUsernameInput.returnPressed.connect (self.write)
+        self.newPasswordInput.returnPressed.connect (self.write)
         
         addAccountButton = QPushButton ('Add this Account')
-        addAccountButton.clicked.connect (self.addAccount)
+        addAccountButton.clicked.connect (self.write)
         layout.addWidget (addAccountButton, 2, 0, 1, 2)
         layout.setRowMinimumHeight (2, 75)
 
@@ -182,19 +182,15 @@ class Client (QMainWindow):
 
 
     # Actions for Widgets / Event Handlers.
-    def addAccount (self):
-        # Does not validate the username or password.
-        self.write ()
-
     def login (self):
         # Ask the server about this username-password pair.
         # If this is a legitimate account and credential, show the
         # chat screen.
         self.write ()
 
-        if (self.username != ""):
-            # Send the server the username.
+        if self.username != "":
             self.display (2)
+            self.setWindowTitle (self.username + "'s Chat Bocks")
 
 
     # Message Methods.
@@ -209,17 +205,17 @@ class Client (QMainWindow):
                 if type == 'LoginConfirm':
                     # Successful login with this username!
                     self.username = self.usernameInput.text ()
+                    return
                 elif type == 'LoginFailure':
                     pass
                 elif type == 'CreateConfirm':
-                    # Successful creation!
-                    self.username = self.newUsernameInput.text ()
-
+                    # Successful creation! Do nothing.
+                    pass
                 else:
                     # Normal message. Append to the chat history.
                     if (message != ""):
                         self.chatHistory.append (message)
-                        self.update_chat_display ()
+                        self.updateChatDisplay ()
             except Exception as e:
                 print (e)
                 self.client.close ()
@@ -245,26 +241,26 @@ class Client (QMainWindow):
 
                 # Account Creation
                 message = f'{self.newUsernameInput.text ()},{self.newPasswordInput.text ()}'
-                createObj = pickle.dumps(Message("CreateAccount", message))
+                createObj = pickle.dumps (Message("CreateAccount", message))
                 self.client.send (createObj)
 
         # Logged in.
         elif self.username != "":
 
             # Only send a message if there is content in the textbox.
-            if self.messageTextBox.text() != "":
+            if self.messageTextBox.text () != "":
                 message = f'{self.username}: {self.messageTextBox.text ()}'
-                messageObj = pickle.dumps (Message ("", message))
+                messageObj = pickle.dumps (Message ('Message', message))
                 self.client.send (messageObj)
 
                 # Manipulate the display to show the sent message, and clear the
                 # textbox.
-                self.update_chat_display ()
+                self.updateChatDisplay ()
                 self.messageTextBox.clear ()
 
-    def update_chat_display (self):
-        chat_text = "\n".join (self.chatHistory)
-        self.chatBox.setText (chat_text)
+    def updateChatDisplay (self):
+        chatText = "\n".join (self.chatHistory)
+        self.chatBox.setText (chatText)
 
     def start (self):
         receive_thread = threading.Thread (target=self.receive)
