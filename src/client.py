@@ -3,6 +3,7 @@ import threading
 import pickle
 import sys
 from PyQt6.QtWidgets import *
+from message import Message
 
 
 class Client (QMainWindow):
@@ -86,15 +87,3 @@ class Client (QMainWindow):
 
         write_thread = threading.Thread (target=self.write)
         write_thread.start ()
-
-class Message(object):
-    def __init__(self, type, contents):
-        #initialize members
-        self.type_ = type
-        self.contents_ = contents
-
-    def getType(self):
-        return self.type_
-    
-    def getContents(self):
-        return self.contents_

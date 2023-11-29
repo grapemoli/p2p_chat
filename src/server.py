@@ -1,7 +1,8 @@
 import socket
-
+import traceback
 import pickle
 import threading
+from message import Message
 
 host = '0.0.0.0'
 port = 25565
@@ -55,19 +56,6 @@ class DM(object):
 
     def newMessage(self, senderID, message):
         self.messages_.append(Message("Text", message))
-    
-class Message(object):
-    def __init__(self, type, contents):
-        #initialize members
-        self.type_ = type
-        self.contents_ = contents
-
-    def getType(self):
-        return self.type_
-    
-    def getContents(self):
-        return self.contents_
-
 
 def broadcast(message):
     for client in connectedClients:
@@ -79,7 +67,13 @@ def handle(client):
     while True:
         try:
             #what do we do with the client's message?
-            message = pickle.loads(client.recv(1024))
+            print(1)
+            temp = client.recv(1024)
+            print(2)
+            print(temp)
+            message = pickle.loads(temp)
+            print(2.5)
+            #message = pickle.loads(client.recv(1024))
             msgContents = message.getContents().split(',')
 
             if (message.getType() == "LoginReq"):
@@ -98,9 +92,11 @@ def handle(client):
                 confirmation = pickle.dumps(Message("CreateConfirm", ""))
                 client.send(confirmation)
                         
-
+            print(3)
             broadcast(msgContents[0].encode('ascii'))
-        except:
+            print(4)
+        except Exception as e:
+            print(e)
             index = connectedClients.index(client)
             connectedClients.remove(client)
             client.close()
