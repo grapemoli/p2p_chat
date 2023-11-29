@@ -59,7 +59,7 @@ class Client (QMainWindow):
                 if message == 'NAME_QUERY':
                     self.client.send (self.username.encode ('ascii'))
                 else:
-                    # Append to the chat history
+                    # Append to the chat history.
                     if (message != ""):
                         self.chatHistory.append (message)
                         self.update_chat_display ()
