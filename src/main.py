@@ -6,6 +6,7 @@ def main ():
     window = Client ()
     window.start ()
     window.show ()
+
     sys.exit (app.exec ())
 
 if __name__ == "__main__":

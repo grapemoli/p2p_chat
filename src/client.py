@@ -1,18 +1,17 @@
 import socket
 import threading
 import pickle
-import sys
 from PyQt6.QtWidgets import *
+from PyQt6.QtCore import Qt
 from message import Message
 
 
 class Client (QMainWindow):
-    username = "grace"                                    # TODO: configure this on the login screen
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect(('50.90.134.19', 25565))
+    username = ""
+    client = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
+    client.connect (('50.90.134.19', 25565))
 
     def __init__ (self):
-        #self.username = input ('What is your username? ')  # TODO: make this the first thing that appears
         super().__init__ ()
 
         # Set the window properties (title and initial size)
@@ -20,46 +19,121 @@ class Client (QMainWindow):
         self.setGeometry (100, 100, 400, 300)  # (x, y, width, height)
 
         # Main window
-        mainWindow = QWidget ()
-        self.setCentralWidget (mainWindow)
+        self.mainWindow = QWidget ()
+        self.setCentralWidget (self.mainWindow)
 
+        # Configure the current window to be scrollable, but we turn it on and
+        # off based on the needs of the current displayed page.
+        self.scroll = QScrollArea ()
+        self.scroll.setHorizontalScrollBarPolicy (Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll.setVerticalScrollBarPolicy (Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll.setWidgetResizable (True)
+        self.scroll.setWidget (self.mainWindow)
+        self.setCentralWidget (self.scroll)
+
+        # Initialize chat history, necessary widgets.
+        self.messageTextBox = QLineEdit()
+        self.chatHistory = []
+
+        # Bring up the Chat Page
+        self.loginPage ()
+
+
+    # Pages / Widgets
+    def loginPage (self):
+        # TODO: add validation msgs (textbox with error from server)
+        # TODO: login enter button
+
+        # Login form label.
+        layout = QGridLayout()
+
+        # Username input.
+        usernameLabel = QLabel ('<font size="4"> Username </font>')
+        self.usernameInput = QLineEdit()
+        self.usernameInput.setPlaceholderText ('Please enter your username')
+        layout.addWidget (usernameLabel, 0, 0)
+        layout.addWidget (self.usernameInput, 0, 1)
+
+        # Password input.
+        passwordLabel = QLabel ('<font size="4"> Password </font>')
+        self.passwordInput = QLineEdit ()
+        self.passwordInput.setPlaceholderText( 'Please enter your password')
+        layout.addWidget (passwordLabel, 1, 0)
+        layout.addWidget (self.passwordInput, 1, 1)
+
+        # Login Button or Enter action configuration.
+        self.usernameInput.returnPressed.connect (self.login)
+        self.passwordInput.returnPressed.connect (self.login)
+
+        loginButton = QPushButton ('Login')
+        loginButton.clicked.connect (self.login)
+        layout.addWidget (loginButton, 2, 0, 1, 2)
+        layout.setRowMinimumHeight (2, 75)
+
+        self.mainWindow.setLayout(layout)
+
+
+    def chatPage (self):        # TODO: scroll bar, and achoring textbox
+                                # TODO: clear textbox everytime you leave
         # Arrangement of the widgets
         layout = QGridLayout ()
 
-        # Displaying live messages
+        # Chatbox displays all sent and received messages.
         self.chatBox = QLabel ()
         self.chatBox.setWordWrap (True)  # Wrap long messages
-        layout.addWidget (self.chatBox)
+        layout.addWidget (self.chatBox, 0, 0)
 
-        # Inline: text box, enter button
-        messageLayout = QGridLayout ()
-        self.messageTextBox = QLineEdit ()
-        self.messageTextBox.font ().setPointSize(18)
+        # Text box area.
+        #self.messageTextBox = QLineEdit ()
+        self.messageTextBox.font().setPointSize (18)
         self.messageTextBox.setPlaceholderText ("Type your message...")
+
+        # Configure the enter button and the enter action.
         self.messageTextBox.returnPressed.connect (self.write)
         self.sendButton = QPushButton ()
-        self.sendButton.setText ("Enter")       # TODO: use grid properties to align in a line
-        #self.sendButton.clicked.connect (self.write)
-        #messageLayout.addWidget (self.messageTextBox, 0, 0, 0, 0)
-        #messageLayout.addWidget (self.sendButton, 0, 0, 0, 1)
-        layout.addWidget (self.messageTextBox)
-        layout.addWidget (self.sendButton)
-        #layout.addWidget (messageLayout)
+        self.sendButton.setText ("Enter")
+        self.sendButton.clicked.connect (self.write)
+
+        # Format the elements in a line.
+        layout.addWidget (self.messageTextBox, 1, 0)
+        layout.addWidget (self.sendButton, 1, 1)
 
         # Set the layout for the central widget
-        mainWindow.setLayout (layout)
+        self.mainWindow.setLayout (layout)
 
-        # Initialize chat history
-        self.chatHistory = []
+
+    def login (self):
+        # Ask the server about this username-password pair.
+        # If this is a legitimate account and credential, show the
+        # chat screen.
+        if (self.usernameInput.text () != "" and self.passwordInput.text () != ""):
+            self.write ()
+
+            if (self.username != ""):
+                # Send the server the username.
+                self.chatPage ()
+
+        print (self.usernameInput.text ())  # TODO: remove, this is testing prints
+        print (self.passwordInput.text ())
+
 
     def receive (self):
         while True:
             try:
-                message = self.client.recv (1024).decode ('ascii')
-                if message == 'NAME_QUERY':
+                msgObject = pickle.loads (self.client.recv(1024))
+                message = msgObject.getContents ()
+
+                # Special (or normal) messages received from the server.
+                if message == 'NameQuery':
+                    # The implementation of this is that the server will keep asking
+                    # for the username until the client's sent username is not an
+                    # empty string. Username is ONLY set when there is a successful login.
                     self.client.send (self.username.encode ('ascii'))
+                elif message == 'LoginConfirm':
+                    # Successful login with this username!
+                    self.username = self.usernameInput.text ()
                 else:
-                    # Append to the chat history.
+                    # Normal message. Append to the chat history.
                     if (message != ""):
                         self.chatHistory.append (message)
                         self.update_chat_display ()
@@ -68,16 +142,35 @@ class Client (QMainWindow):
                 self.client.close ()
                 break
 
+
     def write (self):
-        if self.messageTextBox.text() != "":
-            message = f'{self.username}: {self.messageTextBox.text ()}'
-            toSend = pickle.dumps(Message("None", message))
-            self.client.send (toSend)
-            self.update_chat_display ()
-            self.messageTextBox.clear ()
+        # While every textbox will be write to the server, not every
+        # write will perform the same.
+
+        # Not logged in.
+        if self.username == "":
+
+            # Only send a message if there are inputs for username and password.
+            if self.usernameInput.text () != "" and self.passwordInput.text () != "":
+                message = f'{self.usernameInput.text ()},{self.passwordInput.text ()}'
+                messageToSend = pickle.dumps (Message("LoginReq", message))
+                self.client.send (messageToSend)
+
+        # Logged in.
+        elif self.username != "":
+
+            # Only send a message if there is content in the textbox.
+            if self.messageTextBox.text() != "":
+                message = f'{self.username}: {self.messageTextBox.text ()}'
+                messageToSend = pickle.dumps (Message ("None", message))
+                self.client.send (messageToSend)
+
+                # Manipulate the display to show the sent message, and clear the
+                # textbox.
+                self.update_chat_display ()
+                self.messageTextBox.clear ()
 
     def update_chat_display (self):
-        # Display the chat history in the QLabel
         chat_text = "\n".join (self.chatHistory)
         self.chatBox.setText (chat_text)
 

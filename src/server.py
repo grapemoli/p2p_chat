@@ -58,7 +58,7 @@ class DM (object):
         self.messages_.append(Message ("Text", message))
 
 def broadcast (message):
-    print (message.decode ('ascii'))
+    print (message.decode ('ascii'))   # TODO remove, is only here for testing
 
     for client in connectedClients:
         client.send (message)
@@ -72,16 +72,17 @@ def handle (client):
             message = pickle.loads (client.recv (1024))
             msgContents = message.getContents ().split (',')
 
+            # Different types of messages require different methods of handling
             if message.getType () == "LoginReq":
                 for account in allUsers:
                     if (account.getUsername() == msgContents[0]) and (account.getPassword() == msgContents[1]):
                         # Successful sign in
                         user = account
-                        confirmation = pickle.dumps(Message ("LoginConfirm", ""))
-                        client.send(confirmation)
+                        confirmation = pickle.dumps (Message ("LoginConfirm", ""))
+                        client.send (confirmation)
                     else:
                         # Bad username or password
-                        print("sign in fail")
+                        print ("Sign-in failure.")
 
             if (message.getType () == "CreateAccount"):
                 allUsers.append (Account (msgContents[0], msgContents[1]))
@@ -89,7 +90,7 @@ def handle (client):
                 client.send (confirmation)
 
             # TODO: remove broadcast
-            broadcast(msgContents[0].encode ('ascii')) #Broadcast is only temporary and for testing
+            broadcast(msgContents[0].encode ('ascii')) # Broadcast is only temporary and for testing
 
         except Exception as e:
             print (e)
@@ -107,12 +108,20 @@ def handle (client):
 def receive ():
     while True:
         client, address = server.accept ()
-        print (f"Connected with {str(address)}")
+        print (f"Connected with {str (address)}")
 
-        client.send ('NAME_QUERY'.encode ('ascii'))
-        username = client.recv (1024).decode ('ascii')
-        usernames.append (username)
-        connectedClients.append (client)
+        username = ""
+
+        # Problem: the server immediate asks for a username upon a secure
+        # connection with the client; however, the client must take the time to
+        # login. The complex but time & network-efficient method is to use an async
+        # method; however, that's complex in Python. So, we opt to keep asking the
+        # client for a username message until the username returned is not "".
+        while (username == ""):
+            client.send ('NameQuery'.encode ('ascii'))
+            username = client.recv (1024).decode ('ascii')
+            usernames.append (username)
+            connectedClients.append (client)
 
         print (f'Username of new client is {username}.')
         broadcast (f'   -->{username} has joined the chat.'.encode ('ascii'))
