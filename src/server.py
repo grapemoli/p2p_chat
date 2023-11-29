@@ -55,13 +55,14 @@ class DM (object):
         self.messages_ = []
 
     def newMessage (self, senderID, message):
-        self.messages_.append(Message ("Text", message))
+        self.messages_.append (Message ("Text", message))
 
 def broadcast (message):
     print (message.decode ('ascii'))   # TODO remove, is only here for testing
+    msgObj = pickle.dumps (Message ("", message))
 
     for client in connectedClients:
-        client.send (message)
+        client.send (msgObj)
 
 # Runs in a thread, constantly checks if the client has sent a new message
 def handle (client):
@@ -74,33 +75,72 @@ def handle (client):
 
             # Different types of messages require different methods of handling
             if message.getType () == "LoginReq":
+                login = False
+                accountExists = False
+
                 for account in allUsers:
                     if (account.getUsername() == msgContents[0]) and (account.getPassword() == msgContents[1]):
                         # Successful sign in
-                        user = account
-                        confirmation = pickle.dumps (Message ("LoginConfirm", ""))
-                        client.send (confirmation)
-                    else:
-                        # Bad username or password
-                        print ("Sign-in failure.")
+                        confirmObj = pickle.dumps (Message ("LoginConfirm", ""))
+                        client.send (confirmObj)
+
+                        # Broadcast the login.
+                        print (f'Username of client is {account.getUsername ()}.')
+
+                        index = connectedClients.index (client)
+                        usernames[index] = account.getUsername ()
+
+                        broadcastObj = pickle.dumps (Message ("", f'   -->{account.getUsername()} has joined the chat.'))
+                        #broadcast (f'   -->{usernames[index]} has joined the chat.'.encode('ascii'))
+                        #TODO: talk to alex about this: all messages sent must be a message object
+                        broadcast (broadcastObj)
+
+                        ackObj = pickle.dumps (Message ("ACK", "Connected to server."))
+                        client.send (ackObj)
+
+                        # No need to look further. :)
+                        login = True
+                        accountExists = True
+                        break
+                    elif (account.getUsername () == msgContents [0]):
+                        accountExists = True
+                        break
+
+                # If no login is found after looking through all the accounts, there was a login failure.
+                if accountExists == False:
+                    denyObj = pickle.dumps (Message ("LoginFailure", "This account does not exist."))
+                    client.send (denyObj)
+                    print ("Sign-in failure.")
+                elif login == False and accountExists == True:
+                    denyObj = pickle.dumps(Message("LoginFailure", "Incorrect password."))
+                    client.send(denyObj)
+                    print("Sign-in failure.")
 
             if (message.getType () == "CreateAccount"):
+                # Add the user to the connected clients list.
                 allUsers.append (Account (msgContents[0], msgContents[1]))
                 confirmation = pickle.dumps (Message ("CreateConfirm", ""))
                 client.send (confirmation)
 
-            # TODO: remove broadcast
-            broadcast(msgContents[0].encode ('ascii')) # Broadcast is only temporary and for testing
+                # Set the username in the usernames list.
+                index = connectedClients.index (client)
+                usernames[index] = msgContents[0]
+
+            broadcast (msgContents[0].encode ('ascii')) # TODO: Broadcast is only temporary and for testing
 
         except Exception as e:
             print (e)
+
+            # TODO: talk to alex about this -> not all connections may be logged in! maybe add a TTL to each thread?
+            # TODO: remove usernames list (no use for it)?
             index = connectedClients.index (client)
             connectedClients.remove (client)
-            client.close ()
             username = usernames[index]
             print (f'{username} lost connection.')
             broadcast (f'{username} left the chat.'.encode ('ascii'))
             usernames.remove (username)
+
+            client.close ()
             break
 
 # Constantly checks for new connections.
@@ -110,25 +150,50 @@ def receive ():
         client, address = server.accept ()
         print (f"Connected with {str (address)}")
 
-        username = ""
+        connectedClients.append (client)
+        usernames.append (address)          # Default nickname is the IP address
 
         # Problem: the server immediate asks for a username upon a secure
         # connection with the client; however, the client must take the time to
-        # login. The complex but time & network-efficient method is to use an async
-        # method; however, that's complex in Python. So, we opt to keep asking the
-        # client for a username message until the username returned is not "".
-        while (username == ""):
-            client.send ('NameQuery'.encode ('ascii'))
-            username = client.recv (1024).decode ('ascii')
-            usernames.append (username)
-            connectedClients.append (client)
+        # login.
+        # Solution: Remove the username array (we don't even need it since the
+        # username is stored in the allusers list).
 
-        print (f'Username of new client is {username}.')
-        broadcast (f'   -->{username} has joined the chat.'.encode ('ascii'))
-        client.send ('Connected to the server.'.encode ('ascii'))
+        # while (username == ""):
+        #     requestUsernameObj = pickle.dumps (Message ("NameQuery", ""))
+        #     client.send (requestUsernameObj)
+        #
+        #     # Exception handler because received object may be a null object.
+        #     try:
+        #         recvObj = pickle.loads (client.recv (1024))
+        #     except:
+        #         continue
+        #
+        #     print (recvObj.getType ())
+        #
+        #     # The only responses at the login screen (because we're stuck at the login screen
+        #     # thus far) is a message containing the username or a request for login validation.
+        #     if (recvObj.getType () == ""):
+        #         username = recvObj.getContents ()
+        #         connectedClients.append (client)
+        #
+        #         if username != "":
+        #             usernames.append (username)
+        #     elif (recvObj.getType () == "LoginReq"):
+        #       pass
+        #     print (username)
+
+
+        # Delay this until the login of the user.
+        # print (f'Username of client is {username}.')
+        # broadcast (f'   -->{username} has joined the chat.'.encode ('ascii'))
+        #
+        # confirm = pickle.dumps (Message ("ACK", "Connected to server."))
+        # client.send (confirm)
 
         thread = threading.Thread (target=handle, args=(client,))
         thread.start ()
 
+# Function Calls
 print ("[+] Server is listening...")
 receive ()
