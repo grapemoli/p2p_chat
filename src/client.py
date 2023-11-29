@@ -1,6 +1,7 @@
 import socket
 import threading
 import pickle
+import traceback
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import Qt
 from message import Message
@@ -75,11 +76,11 @@ class Client (QMainWindow):
         # the login and add account windows have buttons that point to each other--a circular need.
         # So, we make the window-changing buttons in their respective UI methods, but configure here.
         self.toAddAccountButton.clicked.connect (lambda: self.display(1))
-        self.toAddAccountButton.clicked.connect (lambda: self.newUsernameInput.setText ('Please enter a username'))
-        self.toAddAccountButton.clicked.connect (lambda: self.newPasswordInput.setText ('Please enter a username'))
+        self.toAddAccountButton.clicked.connect (lambda: self.newUsernameInput.setText (''))
+        self.toAddAccountButton.clicked.connect (lambda: self.newPasswordInput.setText (''))
         self.toLoginButton.clicked.connect (lambda: self.display(0))
-        self.toLoginButton.clicked.connect (lambda: self.usernameInput.setText('Please enter your username'))
-        self.toLoginButton.clicked.connect (lambda: self.passwordInput.setText('Please enter your password'))
+        self.toLoginButton.clicked.connect (lambda: self.usernameInput.setText(''))
+        self.toLoginButton.clicked.connect (lambda: self.passwordInput.setText(''))
 
     def loginWidgetUI (self):
         # TODO: add validation msgs (textbox with error from server)
@@ -218,7 +219,7 @@ class Client (QMainWindow):
         while True:
             try:
                 msgObject = pickle.loads (self.client.recv (1024))
-                type = msgObject.type ()
+                type = msgObject.getType ()
                 message = msgObject.getContents ()
 
                 # Special (or normal) messages received from the server.
@@ -235,8 +236,8 @@ class Client (QMainWindow):
                     if (message != ""):
                         self.chatHistory.append (message)
                         self.update_chat_display ()
-            except:
-                print ("Error")
+            except Exception as e:
+                print (e)
                 self.client.close ()
                 break
 
@@ -252,13 +253,13 @@ class Client (QMainWindow):
             if self.usernameInput.text () != "" and self.passwordInput.text () != "":
 
                 # Login
-                message = f'{self.usernameInput.text ()}, {self.passwordInput.text ()}'
+                message = f'{self.usernameInput.text ()},{self.passwordInput.text ()}'
                 loginObj = pickle.dumps (Message ("LoginReq", message))       # TODO: idk wtf is wrong with this-- OSError: [Errno 9] Bad file descriptor
                 self.client.send (loginObj)
             elif self.newUsernameInput.text() != "" and self.newPasswordInput.text () != "":
 
                 # Account Creation
-                message = ""
+                message = f'{self.newUsernameInput.text ()},{self.newPasswordInput.text ()}'
                 createObj = pickle.dumps(Message("CreateAccount", message))
                 self.client.send (createObj)
 
