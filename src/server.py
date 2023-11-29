@@ -58,7 +58,7 @@ class DM (object):
         self.messages_.append (Message ("Text", message))
 
 def broadcast (message):
-    print (message.decode ('ascii'))   # TODO remove, is only here for testing
+    print (message)   # TODO remove, is only here for testing
     msgObj = pickle.dumps (Message ("", message))
 
     for client in connectedClients:
@@ -126,7 +126,7 @@ def handle (client):
                 index = connectedClients.index (client)
                 usernames[index] = msgContents[0]
 
-            broadcast (msgContents[0].encode ('ascii')) # TODO: Broadcast is only temporary and for testing
+            broadcast (msgContents[0]) # TODO: Broadcast is only temporary and for testing
 
         except Exception as e:
             print (e)
