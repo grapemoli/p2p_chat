@@ -70,7 +70,7 @@ class Client (QMainWindow):
     def write (self):
         if self.messageTextBox.text() != "":
             message = f'{self.username}: {self.messageTextBox.text ()}'
-            toSend = pickle.dumps(Message("", message))
+            toSend = pickle.dumps(Message("None", message))
             self.client.send (toSend)
             self.update_chat_display ()
             self.messageTextBox.clear ()
