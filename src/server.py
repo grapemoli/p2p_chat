@@ -58,6 +58,7 @@ class DM(object):
         self.messages_.append(Message("Text", message))
 
 def broadcast(message):
+    print(message.decode('ascii'))
     for client in connectedClients:
         client.send(message)
 
@@ -67,13 +68,7 @@ def handle(client):
     while True:
         try:
             #what do we do with the client's message?
-            print(1)
-            temp = client.recv(1024)
-            print(2)
-            print(temp)
-            message = pickle.loads(temp)
-            print(2.5)
-            #message = pickle.loads(client.recv(1024))
+            message = pickle.loads(client.recv(1024))
             msgContents = message.getContents().split(',')
 
             if (message.getType() == "LoginReq"):
@@ -92,9 +87,8 @@ def handle(client):
                 confirmation = pickle.dumps(Message("CreateConfirm", ""))
                 client.send(confirmation)
                         
-            print(3)
-            broadcast(msgContents[0].encode('ascii'))
-            print(4)
+            broadcast(msgContents[0].encode('ascii')) #broadcast is only temporary and for testing
+
         except Exception as e:
             print(e)
             index = connectedClients.index(client)
