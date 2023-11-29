@@ -38,8 +38,6 @@ class Client (QMainWindow):
         self.stack.addWidget (self.addAccountWidget)
         self.stack.addWidget (self.chatWidget)
 
-
-
         # Configure the current window to be scrollable, but we turn it on and
         # off based on the needs of the current displayed page.
         self.scroll = QScrollArea ()
@@ -50,9 +48,6 @@ class Client (QMainWindow):
         self.setCentralWidget (self.scroll)
 
         # Initialize chat history, necessary widgets.
-        self.messageTextBox = QLineEdit()
-        self.newUsernameInput = QLineEdit()
-        self.newPasswordInput = QLineEdit()
         self.chatHistory = []
 
         # Begin the display at the login page.
@@ -64,6 +59,10 @@ class Client (QMainWindow):
     def display (self, index):
         # For switching between different windows with only one window.
         self.stack.setCurrentIndex (index)
+        self.newUsernameInput.clear()
+        self.newPasswordInput.clear()
+        self.usernameInput.clear()
+        self.passwordInput.clear()
 
     def setupUI (self):
         self.loginWidgetUI ()
@@ -76,11 +75,11 @@ class Client (QMainWindow):
         # the login and add account windows have buttons that point to each other--a circular need.
         # So, we make the window-changing buttons in their respective UI methods, but configure here.
         self.toAddAccountButton.clicked.connect (lambda: self.display(1))
-        self.toAddAccountButton.clicked.connect (lambda: self.newUsernameInput.setText (''))
-        self.toAddAccountButton.clicked.connect (lambda: self.newPasswordInput.setText (''))
+        self.toAddAccountButton.clicked.connect (lambda: self.newUsernameInput.setText(''))
+        self.toAddAccountButton.clicked.connect (lambda: self.newPasswordInput.setText(''))
         self.toLoginButton.clicked.connect (lambda: self.display(0))
-        self.toLoginButton.clicked.connect (lambda: self.usernameInput.setText(''))
-        self.toLoginButton.clicked.connect (lambda: self.passwordInput.setText(''))
+        self.toLoginButton.clicked.connect (lambda: self.usernameInput.clear())
+        self.toLoginButton.clicked.connect (lambda: self.passwordInput.clear())
 
     def loginWidgetUI (self):
         # TODO: add validation msgs (textbox with error from server)
@@ -138,10 +137,10 @@ class Client (QMainWindow):
         layout.addWidget (self.newPasswordInput, 1, 1)
 
         # Register Button or Enter action configuration.
-        self.newUsernameInput.returnPressed.connect (self.login)
-        self.newPasswordInput.returnPressed.connect (self.login)
-        self.newPasswordInput = QLineEdit()
-        addAccountButton = QPushButton ('Add this Account')     #TODO: print "account added" & redirect to login?
+        self.newUsernameInput.returnPressed.connect (self.addAccount)
+        self.newPasswordInput.returnPressed.connect (self.addAccount)
+        
+        addAccountButton = QPushButton ('Add this Account')
         addAccountButton.clicked.connect (self.addAccount)
         layout.addWidget (addAccountButton, 2, 0, 1, 2)
         layout.setRowMinimumHeight (2, 75)
@@ -185,33 +184,17 @@ class Client (QMainWindow):
     # Actions for Widgets / Event Handlers.
     def addAccount (self):
         # Does not validate the username or password.
-        if (self.newUsernameInput.text () != "" and self.newPasswordInput.text () != ""):
-            self.write ()
-
-    def clearLayout (self, layout):
-        if layout is not None:
-            while layout.count ():
-                item = layout.takeAt (0)
-                widget = item.widget ()
-                if widget is not None:
-                    widget.deleteLater ()
-                else:
-                    self.clearLayout (item.layout())
+        self.write ()
 
     def login (self):
         # Ask the server about this username-password pair.
         # If this is a legitimate account and credential, show the
         # chat screen.
-        if (self.usernameInput.text () != "" and self.passwordInput.text () != ""):
-            self.write ()
+        self.write ()
 
-            if (self.username != ""):
-                # Send the server the username.
-                self.chatPage ()
-
-
-        print (self.usernameInput.text ())  # TODO: remove, this is testing prints
-        print (self.passwordInput.text ())  # TODO: make sure we clear the textboxes
+        if (self.username != ""):
+            # Send the server the username.
+            self.display (2)
 
 
     # Message Methods.
@@ -223,14 +206,15 @@ class Client (QMainWindow):
                 message = msgObject.getContents ()
 
                 # Special (or normal) messages received from the server.
-                # if type == 'NameQuery':
-                #     # The implementation of this is that the server will keep asking
-                #     # for the username until the client's sent username is not an
-                #     # empty string. Username is ONLY set when there is a successful login.
-                #     self.client.send (self.username.encode ('ascii'))
                 if type == 'LoginConfirm':
                     # Successful login with this username!
                     self.username = self.usernameInput.text ()
+                elif type == 'LoginFailure':
+                    pass
+                elif type == 'CreateConfirm':
+                    # Successful creation!
+                    self.username = self.newUsernameInput.text ()
+
                 else:
                     # Normal message. Append to the chat history.
                     if (message != ""):
@@ -254,8 +238,9 @@ class Client (QMainWindow):
 
                 # Login
                 message = f'{self.usernameInput.text ()},{self.passwordInput.text ()}'
-                loginObj = pickle.dumps (Message ("LoginReq", message))       # TODO: idk wtf is wrong with this-- OSError: [Errno 9] Bad file descriptor
+                loginObj = pickle.dumps (Message ("LoginReq", message))
                 self.client.send (loginObj)
+
             elif self.newUsernameInput.text() != "" and self.newPasswordInput.text () != "":
 
                 # Account Creation
@@ -269,7 +254,7 @@ class Client (QMainWindow):
             # Only send a message if there is content in the textbox.
             if self.messageTextBox.text() != "":
                 message = f'{self.username}: {self.messageTextBox.text ()}'
-                messageObj = pickle.dumps (Message ("", message.encode ()))
+                messageObj = pickle.dumps (Message ("", message))
                 self.client.send (messageObj)
 
                 # Manipulate the display to show the sent message, and clear the
