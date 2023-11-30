@@ -158,15 +158,47 @@ def handle (client):
             if (message.getType () == "CreateAccount"):
                 msgContents = msgContents.split(',')
 
-                # Add the user to the connected clients list.       #TODO: validation! for now, all accounts are added
-                allUsers.append (Account (msgContents[0], msgContents[1]))
-                confirmation = pickle.dumps (Message ("CreateConfirm", ""))
-                client.send (confirmation)
+                # Add the user to the connected clients list.
+
+                # TODO only let unique usernames be made into an account:
+                ################# REFACTOR AS NEEDED ##############################
+                ###### THIS WAS HAPHAZARDLY PUT TOGETHER TO TEST CLIENT
+                accountExists = False
+
+                for account in allUsers:
+                    print (account.getUsername())
+                    if account.getUsername() == msgContents[0]:
+                        # Since we already found the account, we can break early. :)
+                        accountExists = True
+                        break
+
+                # If no login is found after looking through all the accounts, the account does
+                # not exist!
+                if accountExists == False:
+                    # Create the acconut and notify the user.
+                    newAccount = Account (msgContents[0], msgContents[1])
+                    allUsers.append (newAccount)
+
+                    confirmObj = pickle.dumps (Message("CreateConfirm", f'{msgContents[0]} successfully made.'))
+                    client.send (confirmObj)
+
+                    # Set the username of the client in the usernames list.
+                    index = connectedClients.index( client)
+                    print (f'Account created: {usernames[index]} nicknamed {msgContents[0]}')
+                    usernames[index] = msgContents[0]
+                elif accountExists == True:
+                    denyObj = pickle.dumps (Message ("CreateFailure", f'{msgContents[0]} already exists!'))
+                    client.send (denyObj)
+                #################################################################
+
+                # allUsers.append (Account (msgContents[0], msgContents[1]))
+                # confirmation = pickle.dumps (Message ("CreateConfirm", ""))
+                # client.send (confirmation)
 
                 # Set the username of the client in the usernames list.
-                index = connectedClients.index (client)
-                print (f'Account created: {usernames[index]} nicknamed {msgContents[0]}')
-                usernames[index] = msgContents[0]
+                # index = connectedClients.index (client)
+                # print (f'Account created: {usernames[index]} nicknamed {msgContents[0]}')
+                # usernames[index] = msgContents[0]
 
             #broadcast (msgContents[0]) # TODO: Broadcast is only temporary and for testing--delete
 
