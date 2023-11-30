@@ -10,6 +10,7 @@ class Message (object):
     # LoginConfirm
     # LoginFailure
     # CreateConfirm
+    # CreateFailure
     # "" - default, a message sent by a user
     def getType (self):
         return self.type_

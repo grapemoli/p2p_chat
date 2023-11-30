@@ -1,3 +1,4 @@
+import multiprocessing
 import socket
 import threading
 import pickle
@@ -5,13 +6,14 @@ import traceback
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import Qt
 from message import Message
-
+import signal
+import os
 
 class Client (QMainWindow):
 
     username = ""
     client = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
-    client.connect (('127.0.0.1', 25565))   # TODO: 50.90.134.19
+    client.connect (('50.90.134.19', 25565))   # TODO: 50.90.134.19
 
     def __init__ (self):
         super().__init__ ()
@@ -20,9 +22,9 @@ class Client (QMainWindow):
         self.setWindowTitle ("Chat Bocks")
         self.setGeometry (100, 100, 400, 300)  # (x, y, width, height)
 
-        # Main window
-        self.mainWindow = QWidget ()        # mainWindow holds switchWindow, who holds windowList and the stack of other windows
-
+        # Main window: holds the stack of other layouts to provide a single-page
+        # yet multiple-windows application.
+        self.mainWindow = QWidget ()
         self.stack = QStackedLayout ()
         self.mainWindow.setLayout (self.stack)
 
@@ -83,8 +85,6 @@ class Client (QMainWindow):
 
     def loginWidgetUI (self):
         # TODO: add validation msgs (textbox with error from server)
-        # TODO: login enter button
-
         # Login form label.
         layout = QGridLayout()
 
@@ -113,7 +113,7 @@ class Client (QMainWindow):
 
         # Button to create account page.
         self.toAddAccountButton = QPushButton ()
-        self.toAddAccountButton.setText ('To Add Account')
+        self.toAddAccountButton.setText ('Go To Add Account')
         layout.addWidget (self.toAddAccountButton)
 
         self.loginWidget.setLayout (layout)
@@ -137,11 +137,11 @@ class Client (QMainWindow):
         layout.addWidget (self.newPasswordInput, 1, 1)
 
         # Register Button or Enter action configuration.
-        self.newUsernameInput.returnPressed.connect (self.write)
-        self.newPasswordInput.returnPressed.connect (self.write)
+        self.newUsernameInput.returnPressed.connect (self.addAccount)
+        self.newPasswordInput.returnPressed.connect (self.addAccount)
         
         addAccountButton = QPushButton ('Add this Account')
-        addAccountButton.clicked.connect (self.write)
+        addAccountButton.clicked.connect (self.addAccount)
         layout.addWidget (addAccountButton, 2, 0, 1, 2)
         layout.setRowMinimumHeight (2, 75)
 
@@ -152,8 +152,7 @@ class Client (QMainWindow):
 
         self.addAccountWidget.setLayout (layout)
 
-    def chatWidgetUI (self):        # TODO: scroll bar, and achoring textbox
-                                # TODO: clear textbox everytime you leave
+    def chatWidgetUI (self):
         # Arrangement of the widgets
         layout = QGridLayout ()
 
@@ -183,14 +182,35 @@ class Client (QMainWindow):
 
     # Actions for Widgets / Event Handlers.
     def login (self):
-        # Ask the server about this username-password pair.
         # If this is a legitimate account and credential, show the
         # chat screen.
         self.write ()
 
-        if self.username != "":
-            self.display (2)
-            self.setWindowTitle (self.username + "'s Chat Bocks")
+        # Make the system wait for us to receive the reply from the server.
+        self.awaitLoginEvent = threading.Event ()
+        self.awaitLoginEvent.wait (timeout=5)
+
+        # When a thread has received the server's response...
+        if self.awaitLoginEvent.isSet():
+
+            # Let the user login if they have valid credentials!
+            if self.username != "":
+                self.display (2)
+                self.setWindowTitle (self.username + "'s Chat Bocks")
+    def addAccount(self):
+        self.write()
+
+        # Make the system wait for the reply from the server before doing anything.
+        self.awaitAddUserEvent = threading.Event()
+        self.awaitAddUserEvent.wait(timeout=5)
+
+        # Once we receive the reply from the server...
+        if self.awaitAddUserEvent.isSet():
+
+            # If the account is successfully made, return the user to the login screen. >:)
+            if self.username != "":
+                self.display (0)
+                self.username = ""
 
 
     # Message Methods.
@@ -205,12 +225,17 @@ class Client (QMainWindow):
                 if type == 'LoginConfirm':
                     # Successful login with this username!
                     self.username = self.usernameInput.text ()
-                    return
+
+                    # Release the wait on the server reply.
+                    self.awaitLoginEvent.set ()
                 elif type == 'LoginFailure':
-                    pass
+                    self.awaitLoginEvent.set()
                 elif type == 'CreateConfirm':
-                    # Successful creation! Do nothing.
-                    pass
+                    # Successful creation! Release the wait on the server reply.
+                    self.username = self.newUsernameInput.text ()
+                    self.awaitAddUserEvent.set ()
+                elif type == 'CreateFailure':
+                    self.awaitAddUserEvent.set()
                 else:
                     # Normal message. Append to the chat history.
                     if (message != ""):
@@ -220,7 +245,6 @@ class Client (QMainWindow):
                 print (e)
                 self.client.close ()
                 break
-
 
     def write (self):
         # While every textbox will be a write to the server, not every
@@ -262,7 +286,15 @@ class Client (QMainWindow):
         chatText = "\n".join (self.chatHistory)
         self.chatBox.setText (chatText)
 
+    def waitForEvent (self, e):
+        e.wait ()
+
+    def waitForEventTimeout (self, e, t):
+        e.wait (t)
+
     def start (self):
+        signal.signal (signal.SIGUSR1, self.login)
+
         receive_thread = threading.Thread (target=self.receive)
         receive_thread.start ()
 

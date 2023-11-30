@@ -116,7 +116,7 @@ def handle (client):
                     print ("Sign-in failure: Wrong Password")
 
             if (message.getType () == "CreateAccount"):
-                # Add the user to the connected clients list.
+                # Add the user to the connected clients list.       #TODO: validation! for now, all accounts are added
 
                 allUsers.append (Account (msgContents[0], msgContents[1]))
                 confirmation = pickle.dumps (Message ("CreateConfirm", ""))
@@ -133,19 +133,14 @@ def handle (client):
 
         except Exception as e:
             print (e)
-
-            # TODO: talk to alex about this -> not all connections may be logged in! maybe add a TTL to each thread?
-            # TODO: remove usernames list (no use for it)?
             index = connectedClients.index (client)
             connectedClients.remove (client)
             username = usernames[index]
 
             print (f'{username} lost connection.')
-
             broadcast (f'{username} left the chat')
 
             usernames.remove (username)
-
             client.close ()
             break
 
