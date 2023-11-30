@@ -1,4 +1,3 @@
-import multiprocessing
 import socket
 import threading
 import pickle
@@ -6,30 +5,33 @@ import traceback
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import Qt
 from message import Message
-import signal
-import os
 
 class Client (QMainWindow):
-
     username = ""
     client = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
     client.connect (('127.0.0.1', 25565))   # TODO: 50.90.134.19
 
+
+    ####################################
+    # Initialization
+    ####################################
     def __init__ (self):
         super().__init__ ()
 
         # Set the window properties (title and initial size)
-        self.setWindowTitle ("Chat Bocks")
+        self.setWindowTitle ("ChatBocks Login")
         self.setGeometry (100, 100, 400, 300)  # (x, y, width, height)
 
         # Main window: holds the stack of other layouts to provide a single-page
-        # yet multiple-windows application.
+        # application that hosts multiple UIs (as opposed to opening a lot of new
+        # windows for each UI).
         self.mainWindow = QWidget ()
         self.stack = QStackedLayout ()
         self.mainWindow.setLayout (self.stack)
 
 
-        # Create other windows & put them in the list to keep track of them.
+        # Create the other UI's and put them in a list to keep track of them. This
+        # list is also what we use to switch between the UI's.
         self.loginWidget = QWidget ()
         self.addAccountWidget = QWidget ()
         self.chatWidget = QWidget ()
@@ -40,8 +42,9 @@ class Client (QMainWindow):
         self.stack.addWidget (self.addAccountWidget)
         self.stack.addWidget (self.chatWidget)
 
-        # Configure the current window to be scrollable, but we turn it on and
-        # off based on the needs of the current displayed page.
+        # Configure the current window to be scrollable. We can turn it on and
+        # off based on the needs of the current displayed page. For now, only
+        # enable vertical scrolling.
         self.scroll = QScrollArea ()
         self.scroll.setHorizontalScrollBarPolicy (Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll.setVerticalScrollBarPolicy (Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -49,7 +52,7 @@ class Client (QMainWindow):
         self.scroll.setWidget (self.mainWindow)
         self.setCentralWidget (self.scroll)
 
-        # Initialize chat history, necessary widgets.
+        # Initialize chat history for the chatting function.
         self.chatHistory = []
 
         # Begin the display at the login page.
@@ -57,33 +60,52 @@ class Client (QMainWindow):
         self.display (0)
 
 
-    # Pages / Widgets
+    ####################################
+    # UI-Switching Methods
+    ####################################
     def display (self, index):
-        # For switching between different windows with only one window.
+        # For switching between different UIs with only one window, we simply
+        # change to the UI's corresponding index in self.stack.
         self.stack.setCurrentIndex (index)
+
+        # Cleansing.
         self.newUsernameInput.clear()
         self.newPasswordInput.clear()
         self.usernameInput.clear()
         self.passwordInput.clear()
 
+        # Change the window title based on the UI we switch to.
+        if index == 0:
+            self.setWindowTitle ('ChatBox Login')
+        if index == 1:
+            self.setWindowTitle ('Create an Account')
+        if index == 2:
+            self.setWindowTitle (f"{self.username}'s ChatBocks")
+
+    def configureButtons (self):
+        # Configures all the buttons that will "change the UI." The configuration is
+        # done here because the UI needs to be loaded before it can reference another UI; however,
+        # there may be circular dependencies! So, we create the UI's first (and seperately), before
+        # adding the button functionality here.
+        self.toAddAccountButton.clicked.connect (lambda: self.display (1))                  # Change UI.
+        self.toAddAccountButton.clicked.connect (lambda: self.newUsernameInput.setText('')) # Sanitize text boxes.
+        self.toAddAccountButton.clicked.connect (lambda: self.newPasswordInput.setText(''))
+
+        self.toLoginButton.clicked.connect (lambda: self.display (0))                       # Change UI..
+        self.toLoginButton.clicked.connect (lambda: self.usernameInput.clear())             # Sanitize text boxes.
+        self.toLoginButton.clicked.connect (lambda: self.passwordInput.clear())
+
+
+    ####################################
+    # UI Setups
+    ####################################
     def setupUI (self):
         self.loginWidgetUI ()
         self.addAccountWidgetUI ()
         self.chatWidgetUI ()
 
-    def configureButtons (self):
-        # Configures all the buttons that will "change the windows." The configuration is
-        # done here because the UI needs to be loaded before it can reference another UI; however,
-        # the login and add account windows have buttons that point to each other--a circular need.
-        # So, we make the window-changing buttons in their respective UI methods, but configure here.
-        self.toAddAccountButton.clicked.connect (lambda: self.display (1))
-        self.toAddAccountButton.clicked.connect (lambda: self.newUsernameInput.setText(''))
-        self.toAddAccountButton.clicked.connect (lambda: self.newPasswordInput.setText(''))
-        self.toLoginButton.clicked.connect (lambda: self.display (0))
-        self.toLoginButton.clicked.connect (lambda: self.usernameInput.clear())
-        self.toLoginButton.clicked.connect (lambda: self.passwordInput.clear())
-
     def loginWidgetUI (self):
+        # This is the UI for the login widget initialized in the initializer.
         # TODO: add validation msgs (textbox with error from server)
         # Login form label.
         layout = QGridLayout()
@@ -119,6 +141,7 @@ class Client (QMainWindow):
         self.loginWidget.setLayout (layout)
 
     def addAccountWidgetUI (self):
+        # This is the UI for the addAccount widget.
         # Login form label.
         layout = QGridLayout ()
 
@@ -140,7 +163,7 @@ class Client (QMainWindow):
         self.newUsernameInput.returnPressed.connect (self.addAccount)
         self.newPasswordInput.returnPressed.connect (self.addAccount)
         
-        addAccountButton = QPushButton ('Add this Account')
+        addAccountButton = QPushButton ('Add Account')
         addAccountButton.clicked.connect (self.addAccount)
         layout.addWidget (addAccountButton, 2, 0, 1, 2)
         layout.setRowMinimumHeight (2, 75)
@@ -153,6 +176,7 @@ class Client (QMainWindow):
         self.addAccountWidget.setLayout (layout)
 
     def chatWidgetUI (self):
+        # This is the UI for the chatWidget.
         # Arrangement of the widgets
         layout = QGridLayout ()
 
@@ -180,58 +204,79 @@ class Client (QMainWindow):
         self.chatWidget.setLayout (layout)
 
 
-    # Actions for Widgets / Event Handlers.
+    ####################################
+    # Event Handlers
+    ####################################
     def login (self):
-        # If this is a legitimate account and credential, show the
-        # chat screen.
+        # Send a request to the server about the username and password inputted.
         self.write ()
 
-        # Make the system wait for us to receive the reply from the server.
+        # Make the client wait for us to receive the reply from the server before
+        # doing anything.
         self.awaitLoginEvent = threading.Event ()
         self.awaitLoginEvent.wait (timeout=5)
 
-        # When a thread has received the server's response...
-        if self.awaitLoginEvent.isSet():
+        # When the receiver thread has received the server's response...
+        if self.awaitLoginEvent.isSet ():
 
-            # Let the user login if they have valid credentials!
+            # ...let the user log into the application if they have
+            # valid credentials!
             if self.username != "":
                 self.display (2)
-                self.setWindowTitle (self.username + "'s Chat Bocks")
-    def addAccount(self):
-        self.write()
 
-        # Make the system wait for the reply from the server before doing anything.
-        self.awaitAddUserEvent = threading.Event()
-        self.awaitAddUserEvent.wait(timeout=5)
+    def addAccount(self):
+        # Send a request to the server about the username and password inputted.
+        self.write ()
+
+        # Make the client wait for the reply from the server before doing anything.
+        self.awaitAddUserEvent = threading.Event ()
+        self.awaitAddUserEvent.wait (timeout=5)
 
         # Once we receive the reply from the server...
         if self.awaitAddUserEvent.isSet():
 
-            # If the account is successfully made, return the user to the login screen. >:)
+            # ...if the account is successfully made, return the user to the
+            # login screen. We require the user to log in. >:)
             if self.username != "":
                 self.display (0)
                 self.username = ""
 
+    def updateChatDisplay (self):
+        # This is for live chat updates.
+        chatText = "\n".join (self.chatHistory)
+        self.chatBox.setText (chatText)
 
-    # Message Methods.
+
+    ####################################
+    # Thread-Related Methods
+    ####################################
     def receive (self):
+        # This method is continuously run by a thread to prevent the GUI from freezing.
+        # Because the main thread is the only thread that is allowed to manipulate the GUI,
+        # certain responses from the server that require GUI changes will use Events.
+        # Please refer to the appropriate event handler method to see how these Events are
+        # applied.
+
+        # Always looking for server messages.
         while True:
             try:
+                # Unserialize the server's message.
                 msgObject = pickle.loads (self.client.recv (1024))
                 type = msgObject.getType ()
                 message = msgObject.getContents ()
 
-                # Special (or normal) messages received from the server.
+                # Different types of messages require different actions.
                 if type == 'LoginConfirm':
-                    # Successful login with this username!
+                    # The server has confirmed that the user has a successful
+                    # login.
                     self.username = self.usernameInput.text ()
 
-                    # Release the wait on the server reply.
+                    # Release the client's wait on the server to reply.
                     self.awaitLoginEvent.set ()
                 elif type == 'LoginFailure':
                     self.awaitLoginEvent.set()
                 elif type == 'CreateConfirm':
-                    # Successful creation! Release the wait on the server reply.
+                    # Successful creation!
                     self.username = self.newUsernameInput.text ()
                     self.awaitAddUserEvent.set ()
                 elif type == 'CreateFailure':
@@ -242,59 +287,51 @@ class Client (QMainWindow):
                         self.chatHistory.append (message)
                         self.updateChatDisplay ()
             except Exception as e:
+                # Any failure will forcibly close the connection.
                 print (e)
                 self.client.close ()
                 break
 
     def write (self):
-        # While every textbox will be a write to the server, not every
-        # write will perform the same way.
+        # This method is handled by a thread to prevent the GUI from freezing.
+        # Note that this method is NOT continuously looking for messages to send to
+        # the server. This is because this method is treated like an event handler--
+        # it's only called when a message needs to be sent after some button click.
 
-        # Not logged in.
+        # Messages that can be sent if the user is not logged in are login and create account
+        # messages.
         if self.username == "":
-            # Only send a request to the server if there are inputs for username and password.
-
+            # Login: does the user exist and do they have the right credentials?
             if self.usernameInput.text () != "" and self.passwordInput.text () != "":
 
-                # Login
+                # Send the serialized message.
                 message = f'{self.usernameInput.text ()},{self.passwordInput.text ()}'
                 loginObj = pickle.dumps (Message ("LoginReq", message))
                 self.client.send (loginObj)
 
+            # Account Creation: is the account the user is trying to make valid?
             elif self.newUsernameInput.text() != "" and self.newPasswordInput.text () != "":
-
-                # Account Creation
                 message = f'{self.newUsernameInput.text ()},{self.newPasswordInput.text ()}'
-                createObj = pickle.dumps (Message("CreateAccount", message))
+                createObj = pickle.dumps (Message ("CreateAccount", message))
                 self.client.send (createObj)
 
-        # Logged in.
+        # The client can only send these type of messages to the server if the user is logged in.
+        # This acts as a privilege scoping.
         elif self.username != "":
 
-            # Only send a message if there is content in the textbox.
+            # Messages to other user(s).
             if self.messageTextBox.text () != "":
                 message = f'{self.username}: {self.messageTextBox.text ()}'
                 messageObj = pickle.dumps (Message ('Message', message))
                 self.client.send (messageObj)
 
-                # Manipulate the display to show the sent message, and clear the
-                # textbox.
+                # Manipulate the UI to show the sent message in the chatbox. Then
+                # clear the textbox.
                 self.updateChatDisplay ()
                 self.messageTextBox.clear ()
 
-    def updateChatDisplay (self):
-        chatText = "\n".join (self.chatHistory)
-        self.chatBox.setText (chatText)
-
-    def waitForEvent (self, e):
-        e.wait ()
-
-    def waitForEventTimeout (self, e, t):
-        e.wait (t)
-
     def start (self):
-        signal.signal (signal.SIGUSR1, self.login)
-
+        # Thread starts and configurations.
         receive_thread = threading.Thread (target=self.receive)
         receive_thread.start ()
 
