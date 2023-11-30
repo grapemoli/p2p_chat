@@ -69,10 +69,12 @@ class Client (QMainWindow):
         self.stack.setCurrentIndex (index)
 
         # Cleansing.
-        self.newUsernameInput.clear()
-        self.newPasswordInput.clear()
-        self.usernameInput.clear()
-        self.passwordInput.clear()
+        self.newUsernameInput.clear ()
+        self.newPasswordInput.clear ()
+        self.usernameInput.clear ()
+        self.passwordInput.clear ()
+        self.addAccountValidationLabel.clear ()
+        self.loginValidationLabel.clear ()
 
         # Change the window title based on the UI we switch to.
         if index == 0:
@@ -138,6 +140,10 @@ class Client (QMainWindow):
         self.toAddAccountButton.setText ('Go To Add Account')
         layout.addWidget (self.toAddAccountButton)
 
+        # For validation (it disappears once you start typing).
+        self.loginValidationLabel = QLabel ()
+        layout.addWidget (self.loginValidationLabel)
+
         self.loginWidget.setLayout (layout)
 
     def addAccountWidgetUI (self):
@@ -172,6 +178,10 @@ class Client (QMainWindow):
         self.toLoginButton = QPushButton ()
         self.toLoginButton.setText ('Go To Login')
         layout.addWidget (self.toLoginButton)
+
+        # For validation (it disappears once you start typing).
+        self.addAccountValidationLabel = QLabel ()
+        layout.addWidget (self.addAccountValidationLabel)
 
         self.addAccountWidget.setLayout (layout)
 
@@ -208,38 +218,54 @@ class Client (QMainWindow):
     # Event Handlers
     ####################################
     def login (self):
+        self.loginValidationLabel.clear ()
+
         # Send a request to the server about the username and password inputted.
-        self.write ()
+        if self.usernameInput.text () != "" and self.passwordInput.text () != "":
+            self.write ()
 
-        # Make the client wait for us to receive the reply from the server before
-        # doing anything.
-        self.awaitLoginEvent = threading.Event ()
-        self.awaitLoginEvent.wait (timeout=5)
+            # Make the client wait for us to receive the reply from the server before
+            # doing anything.
+            self.awaitLoginEvent = threading.Event ()
+            self.awaitLoginEvent.wait (timeout=5)
 
-        # When the receiver thread has received the server's response...
-        if self.awaitLoginEvent.isSet ():
+            # When the receiver thread has received the server's response...
+            if self.awaitLoginEvent.isSet ():
 
-            # ...let the user log into the application if they have
-            # valid credentials!
-            if self.username != "":
-                self.display (2)
+                # ...let the user log into the application if they have
+                # valid credentials!
+                if self.username != "":
+                    self.display (2)
+        else:
+            if self.usernameInput.text () == "":
+                self.loginValidationLabel.setText ('Please input a username!')
+            elif self.passwordInput.text () == "":
+                self.loginValidationLabel.setText ('Please input a password!')
 
     def addAccount (self):
+        self.addAccountValidationLabel.clear ()
+
         # Send a request to the server about the username and password inputted.
-        self.write ()
+        if self.newUsernameInput.text () != "" and self.newPasswordInput.text () != "":
+            self.write ()
 
-        # Make the client wait for the reply from the server before doing anything.
-        self.awaitAddUserEvent = threading.Event ()
-        self.awaitAddUserEvent.wait (timeout=5)
+            # Make the client wait for the reply from the server before doing anything.
+            self.awaitAddUserEvent = threading.Event ()
+            self.awaitAddUserEvent.wait (timeout=5)
 
-        # Once we receive the reply from the server...
-        if self.awaitAddUserEvent.isSet():
+            # Once we receive the reply from the server...
+            if self.awaitAddUserEvent.isSet():
 
-            # ...if the account is successfully made, return the user to the
-            # login screen. We require the user to log in. >:)
-            if self.username != "":
-                self.display (0)
-                self.username = ""
+                # ...if the account is successfully made, return the user to the
+                # login screen. We require the user to log in. >:)
+                if self.username != "":
+                    self.display (0)
+                    self.username = ""
+        else:
+            if self.newUsernameInput.text () == "":
+                self.addAccountValidationLabel.setText ('Please input a username!')
+            elif self.newPasswordInput.text () == "":
+                self.addAccountValidationLabel.setText ('Please input a password!')
 
     def updateChatDisplay (self):
         # This is for live chat updates.
@@ -268,7 +294,7 @@ class Client (QMainWindow):
                 # Different types of messages require different actions.
                 if type == '':
                     # Your typical message between users.
-                    # TODO: add recipient, ignoring if the recipient isnt you (i.e., sent by you probs)
+                    # TODO: add recipient to Message, ignoring if the recipient isnt you (i.e., sent by you probs)
                     self.chatHistory.append (message)
                     self.updateChatDisplay ()
                 if type == 'LoginConfirm':
@@ -279,13 +305,14 @@ class Client (QMainWindow):
                     # Release the client's wait on the server to reply.
                     self.awaitLoginEvent.set ()
                 elif type == 'LoginFailure':
-                    self.awaitLoginEvent.set()
+                    self.loginValidationLabel.setText (message)
+                    self.awaitLoginEvent.set ()
                 elif type == 'CreateConfirm':
-                    # Successful creation!
                     self.username = self.newUsernameInput.text ()
                     self.awaitAddUserEvent.set ()
                 elif type == 'CreateFailure':
-                    self.awaitAddUserEvent.set()
+                    self.addAccountValidationLabel.setText (message)
+                    self.awaitAddUserEvent.set ()
                 else:
                     pass
             except Exception as e:
