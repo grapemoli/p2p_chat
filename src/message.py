@@ -19,6 +19,7 @@
 #
 #
 # "" - ...or no type; a message sent from a user to another user
+#    - content: '{username}: {message}'
 ########################################################################
 
 class Message (object):

@@ -224,7 +224,7 @@ class Client (QMainWindow):
             if self.username != "":
                 self.display (2)
 
-    def addAccount(self):
+    def addAccount (self):
         # Send a request to the server about the username and password inputted.
         self.write ()
 
@@ -266,6 +266,11 @@ class Client (QMainWindow):
                 message = msgObject.getContents ()
 
                 # Different types of messages require different actions.
+                if type == '':
+                    # Your typical message between users.
+                    # TODO: add recipient, ignoring if the recipient isnt you (i.e., sent by you probs)
+                    self.chatHistory.append (message)
+                    self.updateChatDisplay ()
                 if type == 'LoginConfirm':
                     # The server has confirmed that the user has a successful
                     # login.
@@ -282,10 +287,7 @@ class Client (QMainWindow):
                 elif type == 'CreateFailure':
                     self.awaitAddUserEvent.set()
                 else:
-                    # Normal message. Append to the chat history.
-                    if (message != ""):
-                        self.chatHistory.append (message)
-                        self.updateChatDisplay ()
+                    pass
             except Exception as e:
                 # Any failure will forcibly close the connection.
                 print (e)
@@ -318,16 +320,13 @@ class Client (QMainWindow):
         # The client can only send these type of messages to the server if the user is logged in.
         # This acts as a privilege scoping.
         elif self.username != "":
-
             # Messages to other user(s).
             if self.messageTextBox.text () != "":
                 message = f'{self.username}: {self.messageTextBox.text ()}'
-                messageObj = pickle.dumps (Message ('Message', message))
+                messageObj = pickle.dumps (Message ('', message))
                 self.client.send (messageObj)
 
-                # Manipulate the UI to show the sent message in the chatbox. Then
-                # clear the textbox.
-                self.updateChatDisplay ()
+                # Sanitize.
                 self.messageTextBox.clear ()
 
     def start (self):
