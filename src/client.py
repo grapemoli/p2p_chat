@@ -13,7 +13,7 @@ class Client (QMainWindow):
 
     username = ""
     client = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
-    client.connect (('50.90.134.19', 25565))   # TODO: 50.90.134.19
+    client.connect (('127.0.0.1', 25565))   # TODO: 50.90.134.19
 
     def __init__ (self):
         super().__init__ ()
