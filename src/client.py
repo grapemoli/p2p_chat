@@ -28,6 +28,7 @@ class Client (QMainWindow):
         self.mainWindow = QWidget ()
         self.stack = QStackedLayout ()
         self.mainWindow.setLayout (self.stack)
+        self.setCentralWidget (self.mainWindow)
 
 
         # Create the other UI's and put them in a list to keep track of them. This
@@ -41,16 +42,6 @@ class Client (QMainWindow):
         self.stack.addWidget (self.loginWidget)
         self.stack.addWidget (self.addAccountWidget)
         self.stack.addWidget (self.chatWidget)
-
-        # Configure the current window to be scrollable. We can turn it on and
-        # off based on the needs of the current displayed page. For now, only
-        # enable vertical scrolling.
-        self.scroll = QScrollArea ()
-        self.scroll.setHorizontalScrollBarPolicy (Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll.setVerticalScrollBarPolicy (Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.scroll.setWidgetResizable (True)
-        self.scroll.setWidget (self.mainWindow)
-        self.setCentralWidget (self.scroll)
 
         # Initialize chat history for the chatting function.
         self.chatHistory = []
@@ -188,12 +179,23 @@ class Client (QMainWindow):
     def chatWidgetUI (self):
         # This is the UI for the chatWidget.
         # Arrangement of the widgets
-        layout = QGridLayout ()
+        layout = QVBoxLayout ()
+        layoutTextInput = QGridLayout ()
 
         # Chatbox displays all sent and received messages.
         self.chatBox = QLabel ()
         self.chatBox.setWordWrap (True)  # Wrap long messages
-        layout.addWidget (self.chatBox, 0, 0)
+
+        # Configure the chatbox display, ONLY, to be scrollable.
+        self.chatScroll = QScrollArea()
+        self.chatScroll.setHorizontalScrollBarPolicy (Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.chatScroll.setVerticalScrollBarPolicy (Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.chatScroll.setWidgetResizable (True)
+        self.chatScroll.setWidget (self.chatBox)
+        layout.addWidget (self.chatScroll)
+
+        # This keeps the scroller at the bottom.
+        self.chatScroll.verticalScrollBar ().setValue (self.chatScroll.verticalScrollBar ().maximum ())
 
         # Text box area.
         self.messageTextBox = QLineEdit ()
@@ -207,10 +209,11 @@ class Client (QMainWindow):
         self.sendButton.clicked.connect (self.write)
 
         # Format the elements in a line.
-        layout.addWidget (self.messageTextBox, 1, 0)
-        layout.addWidget (self.sendButton, 1, 1)
+        layoutTextInput.addWidget (self.messageTextBox, 0, 0)
+        layoutTextInput.addWidget (self.sendButton, 0, 1)
 
         # Set the layout for the central widget
+        layout.addLayout (layoutTextInput)
         self.chatWidget.setLayout (layout)
 
 
@@ -272,6 +275,9 @@ class Client (QMainWindow):
         chatText = "\n".join (self.chatHistory)
         self.chatBox.setText (chatText)
 
+        # This keeps the scroll bar of the chatbox from riding up with new chats.
+        self.chatScroll.verticalScrollBar ().setValue (self.chatScroll.verticalScrollBar ().maximum ())
+
 
     ####################################
     # Thread-Related Methods
@@ -294,7 +300,6 @@ class Client (QMainWindow):
                 # Different types of messages require different actions.
                 if type == '':
                     # Your typical message between users.
-                    # TODO: add recipient to Message, ignoring if the recipient isnt you (i.e., sent by you probs)
                     self.chatHistory.append (message)
                     self.updateChatDisplay ()
                 if type == 'LoginConfirm':
