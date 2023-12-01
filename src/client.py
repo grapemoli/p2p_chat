@@ -257,7 +257,7 @@ class Client (QMainWindow):
             # Make the client wait for us to receive the reply from the server before
             # doing anything.
             self.awaitLoginEvent = threading.Event ()
-            self.awaitLoginEvent.wait (timeout=5)
+            self.awaitLoginEvent.wait (timeout=20)
 
             # When the receiver thread has received the server's response...
             if self.awaitLoginEvent.isSet ():
@@ -423,7 +423,6 @@ class Client (QMainWindow):
             else:
                 # Choosing a user to chat with.
                 if self.chatRecipient != "":
-                    print (f'chat recipient: {self.chatRecipient}')
                     message = [self.chatRecipient]
                     messageObj = pickle.dumps (Message ('SwitchToDM', message))
                     self.client.send (messageObj)

@@ -230,18 +230,18 @@ def handle (client):
                     client.send (denyObj)
 
             elif (message.getType() == "SwitchToDM"):
-                user.setPage(["DM", msgContents[0]])
+                user.setPage(["DM", str(msgContents[0])])
 
                 currentDM = None
 
                 # If DM history between these 2 users doesn't exist, create it.
                 foundDM = False
                 for dm in DMs:
-                    if (dm.getUserPair[0] == user.getUserID and dm.getUserPair[1] == msgContents[0]):
+                    if (dm.getUserPair[0] == user.getUserID() and dm.getUserPair[1] == msgContents[0]):
                         foundDM = True
                         currentDM = dm
                         break
-                    elif (dm.getUserPair[0] == msgContents[0] and dm.getUserPair[1] == user.getUserID):
+                    elif (dm.getUserPair[0] == msgContents[0] and dm.getUserPair[1] == user.getUserID()):
                         foundDM = True
                         currentDM = dm
                         break
