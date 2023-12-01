@@ -249,7 +249,7 @@ def handle (client):
                     DMs.append(currentDM)
 
                 # Give the client the messages it needs to display.
-                msgObj = pickle.dumps(currentDM.getMessages())
+                msgObj = pickle.dumps(Message("DMConfirm", currentDM.getMessages()))
                 client.send(msgObj)
                     
 
