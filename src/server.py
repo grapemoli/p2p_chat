@@ -152,14 +152,13 @@ def handle (client):
                         userList = []
                         for accountUser in allUsers:
                             if (accountUser != user):
-                                userList.append((accountUser.getUserID, accountUser.getUsername))
+                                userList.append((accountUser.getUserID () , accountUser.getUsername ()))
 
                         confirmObj = pickle.dumps (Message ("LoginConfirm", userList))
                         client.send (confirmObj)
 
                         # Broadcast the login.
                         print (f'Username of client is {account.getUsername ()}.')
-                        broadcast(f'   -->{account.getUsername()} has joined the chat.')
 
                         # Fetch and update the client's information to match the Account on file.
                         index = connectedClients.index (client)
@@ -202,7 +201,6 @@ def handle (client):
                 accountExists = False
 
                 for account in allUsers:
-                    print (account.getUsername())
                     if account.getUsername() == msgContents[0]:
                         # Since we already found the account, we can break early. :)
                         accountExists = True
@@ -211,7 +209,7 @@ def handle (client):
                 # If no login is found after looking through all the accounts, the account does
                 # not exist!
                 if accountExists == False:
-                    # Create the acconut and notify the user.
+                    # Create the account and notify the user.
                     newAccount = Account (msgContents[0], msgContents[1])
                     allUsers.append (newAccount)
 
@@ -220,7 +218,7 @@ def handle (client):
 
                     # Set the username of the client in the usernames list.
                     index = connectedClients.index( client)
-                    print (f'Account created: {usernames[index]} nicknamed {msgContents[0]}')
+                    print (f'Account created: {usernames[index]} nicknamed {newAccount.getUsername()}')
                     usernames[index] = msgContents[0]
                 elif accountExists == True:
                     denyObj = pickle.dumps (Message ("CreateFailure", f'{msgContents[0]} already exists!'))
@@ -251,7 +249,8 @@ def handle (client):
                 # Give the client the messages it needs to display.
                 msgObj = pickle.dumps(Message("DMConfirm", currentDM.getMessages()))
                 client.send(msgObj)
-                    
+                
+                broadcast (pickle.dumps(Message('', f'   -->{account.getUsername()} has joined the chat.')))
 
             elif (message.getType() == "Text"):
 

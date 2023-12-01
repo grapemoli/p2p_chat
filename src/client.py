@@ -18,6 +18,11 @@ class Client (QMainWindow):
     def __init__ (self):
         super().__init__ ()
 
+        # Initialize proper data structures.
+        self.allUserId = []
+        self.chatHistory = []
+        self.chatRecipient = ""
+
         # Set the window properties (title and initial size)
         self.setWindowTitle ("ChatBocks Login")
         self.setGeometry (100, 100, 400, 300)  # (x, y, width, height)
@@ -35,16 +40,15 @@ class Client (QMainWindow):
         # list is also what we use to switch between the UI's.
         self.loginWidget = QWidget ()
         self.addAccountWidget = QWidget ()
-        self.chatWidget = QWidget ()
+        self.chatWidget = QWidget ()                # Must be made dynamically before every display ()
+        self.selectChatWidget = QWidget ()          # Must be made dynamically before every display ()
 
         self.setupUI ()
 
         self.stack.addWidget (self.loginWidget)
         self.stack.addWidget (self.addAccountWidget)
+        self.stack.addWidget (self.selectChatWidget)
         self.stack.addWidget (self.chatWidget)
-
-        # Initialize chat history for the chatting function.
-        self.chatHistory = []
 
         # Begin the display at the login page.
         self.configureButtons ()
@@ -70,9 +74,11 @@ class Client (QMainWindow):
         # Change the window title based on the UI we switch to.
         if index == 0:
             self.setWindowTitle ('ChatBox Login')
-        if index == 1:
+        elif index == 1:
             self.setWindowTitle ('Create an Account')
-        if index == 2:
+        elif index == 2:
+            self.setWindowTitle ('Select a Chat')
+        elif index == 3:
             self.setWindowTitle (f"{self.username}'s ChatBocks")
 
     def configureButtons (self):
@@ -99,7 +105,6 @@ class Client (QMainWindow):
 
     def loginWidgetUI (self):
         # This is the UI for the login widget initialized in the initializer.
-        # TODO: add validation msgs (textbox with error from server)
         # Login form label.
         layout = QGridLayout()
 
@@ -159,7 +164,7 @@ class Client (QMainWindow):
         # Register Button or Enter action configuration.
         self.newUsernameInput.returnPressed.connect (self.addAccount)
         self.newPasswordInput.returnPressed.connect (self.addAccount)
-        
+
         addAccountButton = QPushButton ('Add Account')
         addAccountButton.clicked.connect (self.addAccount)
         layout.addWidget (addAccountButton, 2, 0, 1, 2)
@@ -175,6 +180,28 @@ class Client (QMainWindow):
         layout.addWidget (self.addAccountValidationLabel)
 
         self.addAccountWidget.setLayout (layout)
+
+    def selectChatWidgetUI (self):
+        layout = QVBoxLayout ()
+
+        # TODO make scrollable
+
+        # Make buttons with the userID appended at the end.
+        if len (self.allUserId) != 0:
+            for user in self.allUserId:
+                buttonName = f'selectChatButton{user[0]}'
+                selectChatButton = QPushButton ()
+                selectChatButton.setText (f'Chat with {user[1]}')
+                selectChatButton.clicked.connect (self.selectChat)
+                selectChatButton.setObjectName (buttonName)
+                layout.addWidget (selectChatButton)
+                print (str(user))
+        else:
+            label = QLabel ()
+            label.setText ('No one has registered an account for you to chat with..')
+            layout.addWidget (label)
+
+        self.selectChatWidget.setLayout (layout)
 
     def chatWidgetUI (self):
         # This is the UI for the chatWidget.
@@ -238,6 +265,7 @@ class Client (QMainWindow):
                 # ...let the user log into the application if they have
                 # valid credentials!
                 if self.username != "":
+                    self.selectChatWidgetUI ()
                     self.display (2)
         else:
             if self.usernameInput.text () == "":
@@ -272,11 +300,34 @@ class Client (QMainWindow):
 
     def updateChatDisplay (self):
         # This is for live chat updates.
-        chatText = "\n".join (self.chatHistory)
+        chatText = "".join (self.chatHistory)
         self.chatBox.setText (chatText)
 
         # This keeps the scroll bar of the chatbox from riding up with new chats.
         self.chatScroll.verticalScrollBar ().setValue (self.chatScroll.verticalScrollBar ().maximum ())
+
+    def selectChat (self):
+        button = self.sender()
+        buttonName = str (button.objectName())
+
+        # Since the userId is appended onto the button with format
+        # selectChatButton{userId}, we can parse the user id.
+        self.chatRecipient = buttonName[16:]
+        self.write ()
+
+        # Place an event, waiting for the server to respond.
+        self.awaitSelectChatEvent = threading.Event ()
+        self.awaitSelectChatEvent.wait (timeout=5)
+
+        # When the receiver thread has received the server's response...
+        if self.awaitLoginEvent.isSet ():
+
+            # If the event set, switch to the chat display and update the
+            # chat history to include the past messages.
+            self.display (3)
+        else:
+            print ("Timeout while waiting for server for dm information")
+        print (f'Chatting with: {self.chatRecipient}')
 
 
     ####################################
@@ -302,10 +353,22 @@ class Client (QMainWindow):
                     # Your typical message between users.
                     self.chatHistory.append (message)
                     self.updateChatDisplay ()
-                if type == 'LoginConfirm':
+                elif type == 'Message':
+                    # Your typical message between users.
+                    self.chatHistory.append (message)
+                    self.updateChatDisplay ()
+                elif type == 'DMConfirm':
+                    self.chatHistory = message
+                    self.awaitSelectChatEvent.set ()
+                elif type == 'LoginConfirm':
                     # The server has confirmed that the user has a successful
                     # login.
                     self.username = self.usernameInput.text ()
+                    self.allUserId = message
+
+                    for i in message:
+                        print(str(i))
+                    print("----")
 
                     # Release the client's wait on the server to reply.
                     self.awaitLoginEvent.set ()
@@ -337,7 +400,6 @@ class Client (QMainWindow):
         if self.username == "":
             # Login: does the user exist and do they have the right credentials?
             if self.usernameInput.text () != "" and self.passwordInput.text () != "":
-
                 # Send the serialized message.
                 message = [self.usernameInput.text (),self.passwordInput.text ()]
                 loginObj = pickle.dumps (Message ("LoginReq", message))
@@ -354,12 +416,21 @@ class Client (QMainWindow):
         elif self.username != "":
             # Messages to other user(s).
             if self.messageTextBox.text () != "":
-                message = [f'{self.username}: {self.messageTextBox.text ()}']
+                message = [f'{self.username}: {self.messageTextBox.text ()}\n']
                 messageObj = pickle.dumps (Message ('', message))
                 self.client.send (messageObj)
 
                 # Sanitize.
                 self.messageTextBox.clear ()
+            else:
+                # Choosing a user to chat with.
+                if self.chatRecipient != "":
+                    print (f'chat recipient: {self.chatRecipient}')
+                    pass
+                    #message = [self.chatRecipient]
+                    #messageObj = pickle.dumps (Message ('SwitchToDM', message))
+                    #self.client.send (messageObj)
+
 
     def start (self):
         # Thread starts and configurations.

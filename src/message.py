@@ -1,5 +1,5 @@
 ########################################################################
-# Types of Messages:
+# Types of Messages:            (content is a list)
 #
 #
 # ACK - successful connection between the server and client
@@ -18,8 +18,18 @@
 # CreateFailure - negative response from server
 #
 #
-# "" - ...or no type; a message sent from a user to another user
+# "Text" - a message sent from a user to another user
 #    - content: '{username}: {message}'
+#
+#
+# SwitchToDM - tells the server that the user to chat with
+#            - content: '{userId of chat recipient}'
+# DMConfirm - tells the client that chatroom is successfully established!
+#           - content: {list of messages}
+# CloseDM - [from client] tells the server that the user has left the chat
+#         - [from client] content: {}
+#         - [from server] tells the client the close DM was received, and sends an updated user list
+#         - [from server] content: {userId, ..., }          <-- exclusive of the client's userId
 ########################################################################
 
 class Message (object):
