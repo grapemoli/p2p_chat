@@ -217,7 +217,6 @@ def handle (client):
                 if accountExists == False:
                     # Create the account and notify the user.
                     newAccount = Account (msgContents[0], msgContents[1])
-                    allUsers.append (newAccount)
 
                     confirmObj = pickle.dumps (Message("CreateConfirm", f'{msgContents[0]} successfully made.'))
                     client.send (confirmObj)
