@@ -102,6 +102,12 @@ class DM (object):
     def newMessage (self, message):
         self.messages_.append (Message ("Text", message))
 
+    def getMessages (self):
+        return self.messages_
+
+    def getUserPair (self):
+        return self.userPair_
+
 
 
 ########################################################################

@@ -22,6 +22,7 @@ class Client (QMainWindow):
         self.allUserId = []
         self.chatHistory = []
         self.chatRecipient = ""
+        self.messageTextBox = QLineEdit ()
 
         # Set the window properties (title and initial size)
         self.setWindowTitle ("ChatBocks Login")
@@ -70,6 +71,7 @@ class Client (QMainWindow):
         self.passwordInput.clear ()
         self.addAccountValidationLabel.clear ()
         self.loginValidationLabel.clear ()
+        self.messageTextBox.clear ()
 
         # Change the window title based on the UI we switch to.
         if index == 0:
@@ -101,7 +103,6 @@ class Client (QMainWindow):
     def setupUI (self):
         self.loginWidgetUI ()
         self.addAccountWidgetUI ()
-        self.chatWidgetUI ()
 
     def loginWidgetUI (self):
         # This is the UI for the login widget initialized in the initializer.
@@ -195,7 +196,6 @@ class Client (QMainWindow):
                 selectChatButton.clicked.connect (self.selectChat)
                 selectChatButton.setObjectName (buttonName)
                 layout.addWidget (selectChatButton)
-                print (str(user))
         else:
             label = QLabel ()
             label.setText ('No one has registered an account for you to chat with..')
@@ -313,6 +313,7 @@ class Client (QMainWindow):
         # Since the userId is appended onto the button with format
         # selectChatButton{userId}, we can parse the user id.
         self.chatRecipient = buttonName[16:]
+
         self.write ()
 
         # Place an event, waiting for the server to respond.
@@ -320,10 +321,11 @@ class Client (QMainWindow):
         self.awaitSelectChatEvent.wait (timeout=5)
 
         # When the receiver thread has received the server's response...
-        if self.awaitLoginEvent.isSet ():
+        if self.awaitSelectChatEvent.isSet ():
 
             # If the event set, switch to the chat display and update the
             # chat history to include the past messages.
+            self.chatWidgetUI ()
             self.display (3)
         else:
             print ("Timeout while waiting for server for dm information")
@@ -365,10 +367,6 @@ class Client (QMainWindow):
                     # login.
                     self.username = self.usernameInput.text ()
                     self.allUserId = message
-
-                    for i in message:
-                        print(str(i))
-                    print("----")
 
                     # Release the client's wait on the server to reply.
                     self.awaitLoginEvent.set ()
@@ -417,7 +415,7 @@ class Client (QMainWindow):
             # Messages to other user(s).
             if self.messageTextBox.text () != "":
                 message = [f'{self.username}: {self.messageTextBox.text ()}\n']
-                messageObj = pickle.dumps (Message ('', message))
+                messageObj = pickle.dumps (Message ("Message", message))
                 self.client.send (messageObj)
 
                 # Sanitize.
@@ -426,10 +424,9 @@ class Client (QMainWindow):
                 # Choosing a user to chat with.
                 if self.chatRecipient != "":
                     print (f'chat recipient: {self.chatRecipient}')
-                    pass
-                    #message = [self.chatRecipient]
-                    #messageObj = pickle.dumps (Message ('SwitchToDM', message))
-                    #self.client.send (messageObj)
+                    message = [self.chatRecipient]
+                    messageObj = pickle.dumps (Message ('SwitchToDM', message))
+                    self.client.send (messageObj)
 
 
     def start (self):
