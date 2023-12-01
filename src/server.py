@@ -143,10 +143,16 @@ def handle (client):
                     if (account.getUsername() == msgContents[0]) and (account.getPassword() == msgContents[1]):
                         # Successful sign in. Send the confirmation response to the user.
 
+                        # Thread now knows the user it is dealing with until close.
+                        user = account
+                        user.setLoggedIn(True)
+                        user.setSocket(client)
+
                         # Build user list to send to client.
                         userList = []
                         for accountUser in allUsers:
-                            userList.append((accountUser.getUserID, accountUser.getUsername))
+                            if (accountUser != user):
+                                userList.append((accountUser.getUserID, accountUser.getUsername))
 
                         confirmObj = pickle.dumps (Message ("LoginConfirm", userList))
                         client.send (confirmObj)
@@ -158,11 +164,6 @@ def handle (client):
                         # Fetch and update the client's information to match the Account on file.
                         index = connectedClients.index (client)
                         usernames[index] = account.getUsername ()
-
-                        # Thread now knows the user it is dealing with until close.
-                        user = account
-                        user.setLoggedIn(True)
-                        user.setSocket(client)
 
                         # This response is for the user to see a confirmation in their UI.
                         ackObj = pickle.dumps (Message ("ACK", "Connected to server."))
@@ -191,7 +192,7 @@ def handle (client):
                     client.send (denyObj)
                     print ("Sign-in failure: Wrong Password")
 
-            if (message.getType () == "CreateAccount"):
+            elif (message.getType () == "CreateAccount"):
 
                 # Add the user to the connected clients list.
 
@@ -225,70 +226,71 @@ def handle (client):
                     denyObj = pickle.dumps (Message ("CreateFailure", f'{msgContents[0]} already exists!'))
                     client.send (denyObj)
 
-                if (message.getType() == "SwitchToDM"):
-                    user.setPage(["DM", msgContents[0]])
+            elif (message.getType() == "SwitchToDM"):
+                user.setPage(["DM", msgContents[0]])
 
+                currentDM = None
+
+                # If DM history between these 2 users doesn't exist, create it.
+                foundDM = False
+                for dm in DMs:
+                    if (dm.getUserPair[0] == user.getUserID and dm.getUserPair[1] == msgContents[0]):
+                        foundDM = True
+                        currentDM = dm
+                        break
+                    elif (dm.getUserPair[0] == msgContents[0] and dm.getUserPair[1] == user.getUserID):
+                        foundDM = True
+                        currentDM = dm
+                        break
+
+                # If foundDM is still false, make the new DM.
+                if (not foundDM):
+                    currentDM = DM(user.getUserID, msgContents[0])
+                    DMs.append(currentDM)
+
+                # Give the client the messages it needs to display.
+                msgObj = pickle.dumps(currentDM.getMessages())
+                client.send(msgObj)
+                    
+
+            elif (message.getType() == "Text"):
+
+                # If we are viewing a DM, text needs only sent to 1 other user.
+                if (user.getPage()[0] == "DM"):
+
+                    recipient = allUsers[user.getPage()[1]]
+
+                    # If recipient is logged in and viewing the page, display the message to them.
+                    if (recipient.getLoggedIn() and recipient.getPage[1] == user.getUserID()):
+                        recipient.getSocket().send(pickle.dumps(message))
+
+                    # Always send message back for sender to display.
+                    client.send(pickle.dumps(message))
+
+                    # Add message to DM history. Need to find the DM first.
                     currentDM = None
-
-                    # If DM history between these 2 users doesn't exist, create it.
-                    foundDM = False
                     for dm in DMs:
                         if (dm.getUserPair[0] == user.getUserID and dm.getUserPair[1] == msgContents[0]):
-                            foundDM = True
                             currentDM = dm
                             break
                         elif (dm.getUserPair[0] == msgContents[0] and dm.getUserPair[1] == user.getUserID):
-                            foundDM = True
                             currentDM = dm
                             break
 
-                    # If foundDM is still false, make the new DM.
-                    if (not foundDM):
-                        currentDM = DM(user.getUserID, msgContents[0])
-                        DMs.append(currentDM)
+                    currentDM.newMessage(msgContents)
 
-                    # Give the client the messages it needs to display.
-                    msgObj = pickle.dumps(currentDM.getMessages())
-                    client.send(msgObj)
-                    
-
-                if (message.getType() == "Text"):
-
-                    # If we are viewing a DM, text needs only sent to 1 other user.
-                    if (user.getPage()[0] == "DM"):
-
-                        recipient = allUsers[user.getPage()[1]]
-
-                        # If recipient is logged in and viewing the page, display the message to them.
-                        if (recipient.getLoggedIn() and recipient.getPage[1] == user.getUserID()):
-                            recipient.getSocket().send(pickle.dumps(message))
-
-                        # Always send message back for sender to display.
-                        client.send(pickle.dumps(message))
-
-                        # Add message to DM history. Need to find the DM first.
-                        currentDM = None
-                        for dm in DMs:
-                            if (dm.getUserPair[0] == user.getUserID and dm.getUserPair[1] == msgContents[0]):
-                                currentDM = dm
-                                break
-                            elif (dm.getUserPair[0] == msgContents[0] and dm.getUserPair[1] == user.getUserID):
-                                currentDM = dm
-                                break
-
-                        currentDM.newMessage(msgContents)
-
-                if (message.getType() == "CloseDM"):
-                    # Build user list to send to client.
-                    userList = []
-                    for account in allUsers:
+            elif (message.getType() == "CloseDM"):
+                # Build user list to send to client.
+                userList = []
+                for account in allUsers:
+                    if (account != user):
                         userList.append((account.getUserID, account.getUsername))
 
-                    # Send updated list of all users to client
-                    dmListObj = pickle.dumps(Message ("CloseDM", userList))
-                    client.send(dmListObj)
+                # Send updated list of all users to client
+                dmListObj = pickle.dumps(Message ("CloseDM", userList))
+                client.send(dmListObj)
 
-                    user.setPage(["DMList", None])
+                user.setPage(["DMList", None])
 
 
         except Exception as e:
