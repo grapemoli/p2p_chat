@@ -142,8 +142,13 @@ def handle (client):
                 for account in allUsers:
                     if (account.getUsername() == msgContents[0]) and (account.getPassword() == msgContents[1]):
                         # Successful sign in. Send the confirmation response to the user.
-                        #TODO: Contents of this message should contain info client needs to display DM list
-                        confirmObj = pickle.dumps (Message ("LoginConfirm", ""))
+
+                        # Build user list to send to client.
+                        userList = []
+                        for accountUser in allUsers:
+                            userList.append((accountUser.getUserID, accountUser.getUsername))
+
+                        confirmObj = pickle.dumps (Message ("LoginConfirm", userList))
                         client.send (confirmObj)
 
                         # Broadcast the login.
@@ -154,7 +159,7 @@ def handle (client):
                         index = connectedClients.index (client)
                         usernames[index] = account.getUsername ()
 
-                        # Thread now knows the user it is dealing with until close
+                        # Thread now knows the user it is dealing with until close.
                         user = account
                         user.setLoggedIn(True)
                         user.setSocket(client)
@@ -242,26 +247,26 @@ def handle (client):
                         currentDM = DM(user.getUserID, msgContents[0])
                         DMs.append(currentDM)
 
-                    # Give the client the messages it needs to display
+                    # Give the client the messages it needs to display.
                     msgObj = pickle.dumps(currentDM.getMessages())
                     client.send(msgObj)
                     
 
                 if (message.getType() == "Text"):
 
-                    # If we are viewing a DM, text needs only sent to 1 other user
+                    # If we are viewing a DM, text needs only sent to 1 other user.
                     if (user.getPage()[0] == "DM"):
 
                         recipient = allUsers[user.getPage()[1]]
 
-                        # If recipient is logged in and viewing the page, display the message to them
+                        # If recipient is logged in and viewing the page, display the message to them.
                         if (recipient.getLoggedIn() and recipient.getPage[1] == user.getUserID()):
                             recipient.getSocket().send(pickle.dumps(message))
 
-                        # Always send message back for sender to display
+                        # Always send message back for sender to display.
                         client.send(pickle.dumps(message))
 
-                        # Add message to DM history. Need to find the DM first
+                        # Add message to DM history. Need to find the DM first.
                         currentDM = None
                         for dm in DMs:
                             if (dm.getUserPair[0] == user.getUserID and dm.getUserPair[1] == msgContents[0]):
@@ -274,9 +279,14 @@ def handle (client):
                         currentDM.newMessage(msgContents)
 
                 if (message.getType() == "CloseDM"):
-                    #TODO: Contents of this message should contain info client needs to display DM list
-                    #dmListObj = pickle.dumps(Message ("CloseDM", ##INFO CLIENT NEEDS##))
-                    #client.send(dmListObj)
+                    # Build user list to send to client.
+                    userList = []
+                    for account in allUsers:
+                        userList.append((account.getUserID, account.getUsername))
+
+                    # Send updated list of all users to client
+                    dmListObj = pickle.dumps(Message ("CloseDM", userList))
+                    client.send(dmListObj)
 
                     user.setPage(["DMList", None])
 
