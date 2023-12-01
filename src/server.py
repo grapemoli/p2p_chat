@@ -98,7 +98,7 @@ def handle (client):
         try:
             # What do we do with the client's message?
             message = pickle.loads (client.recv (1024))
-            msgContents = message.getContents ()
+            msgContents = message.getContents()
 
             # Different types of messages require different methods of handling.
             if message.getType () == '':            # TODO: will need to add a recipient section in the message
@@ -108,11 +108,10 @@ def handle (client):
                 # The user sends a message to the server. The server saves the message in the appropriate
                 # DM class, and sends the to the recipients INCLUDING THE USER.
                 # Or--even better--each DM class has its own broadcast() function that sends to IT'S recipients
-                broadcast (msgContents)
+                broadcast (msgContents[0])
                 print (f'msg: {msgContents}')       # TODO: delete
 
             if message.getType () == "LoginReq":
-                msgContents = msgContents.split (',')
                 login = False
                 accountExists = False
 
@@ -156,7 +155,6 @@ def handle (client):
                     print ("Sign-in failure: Wrong Password")
 
             if (message.getType () == "CreateAccount"):
-                msgContents = msgContents.split(',')
 
                 # Add the user to the connected clients list.
 
