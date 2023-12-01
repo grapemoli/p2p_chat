@@ -339,13 +339,13 @@ class Client (QMainWindow):
             if self.usernameInput.text () != "" and self.passwordInput.text () != "":
 
                 # Send the serialized message.
-                message = f'{self.usernameInput.text ()},{self.passwordInput.text ()}'
+                message = [self.usernameInput.text (),self.passwordInput.text ()]
                 loginObj = pickle.dumps (Message ("LoginReq", message))
                 self.client.send (loginObj)
 
             # Account Creation: is the account the user is trying to make valid?
             elif self.newUsernameInput.text() != "" and self.newPasswordInput.text () != "":
-                message = f'{self.newUsernameInput.text ()},{self.newPasswordInput.text ()}'
+                message = [self.newUsernameInput.text (),self.newPasswordInput.text ()]
                 createObj = pickle.dumps (Message ("CreateAccount", message))
                 self.client.send (createObj)
 
@@ -354,7 +354,7 @@ class Client (QMainWindow):
         elif self.username != "":
             # Messages to other user(s).
             if self.messageTextBox.text () != "":
-                message = f'{self.username}: {self.messageTextBox.text ()}'
+                message = [f'{self.username}: {self.messageTextBox.text ()}']
                 messageObj = pickle.dumps (Message ('', message))
                 self.client.send (messageObj)
 
