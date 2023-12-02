@@ -387,6 +387,7 @@ class Client (QMainWindow):
             except Exception as e:
                 # Any failure will forcibly close the connection.
                 print (e)
+                print (traceback.format_exc())
                 self.client.close ()
                 break
 

@@ -263,7 +263,7 @@ def handle (client):
                     recipient = allUsers[int(user.getPage()[1])]
 
                     # If recipient is logged in and viewing the page, display the message to them.
-                    if (recipient.getLoggedIn() and recipient.getPage[1] == user.getUserID()):
+                    if (recipient.getLoggedIn() and recipient.getPage()[1] == user.getUserID()):
                         recipient.getSocket().send(pickle.dumps(message))
 
                     # Always send message back for sender to display.
@@ -299,6 +299,7 @@ def handle (client):
             # For any client whose connection caused something finnicky to happen (could be that
             # they exited the chat), cut their connection.
             print (e)
+            print (traceback.format_exc())
             index = connectedClients.index (client)
             connectedClients.remove (client)
             username = usernames[index]
