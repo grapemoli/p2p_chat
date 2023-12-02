@@ -153,6 +153,7 @@ def handle (client):
                         user = account
                         user.setLoggedIn(True)
                         user.setSocket(client)
+                        user.setPage(["DMList", None])
 
                         # Build user list to send to client.
                         userList = []
@@ -266,7 +267,7 @@ def handle (client):
                     recipient = allUsers[int(user.getPage()[1])]
 
                     # If recipient is logged in and viewing the page, display the message to them.
-                    if (recipient.getLoggedIn() and (int(recipient.getPage()[1]) == int(user.getUserID()))):
+                    if ((recipient.getPage()[0] == "DM") and (int(recipient.getPage()[1]) == int(user.getUserID()))):
                         recipient.getSocket().send(pickle.dumps(message))
 
                     # Always send message back for sender to display.
