@@ -291,6 +291,7 @@ def handle (client):
                     broadcast(msgContents[0])
 
             elif (message.getType() == "CloseChat"):
+
                 # Build user list to send to client.
                 userList = []
                 for account in allUsers:
