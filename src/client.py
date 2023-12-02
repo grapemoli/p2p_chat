@@ -23,7 +23,7 @@ class Client (QMainWindow):
         self.allUserId = []
         self.chatHistory = ""
         self.messageTextBox = QLineEdit ()
-        self.closeDm = False
+        self.closeChat = False
         self.selectChatButtonList = []      # The users who are already represented with a button.
 
         # Set the window properties (title and initial size)
@@ -64,7 +64,6 @@ class Client (QMainWindow):
     def display (self, index):
         # For switching between different UIs with only one window, we simply
         # change to the UI's corresponding index in self.stack.
-        self.stack.setCurrentIndex (index)
 
         # Cleansing.
         self.newUsernameInput.clear ()
@@ -82,10 +81,21 @@ class Client (QMainWindow):
             self.setWindowTitle ('Create an Account')
         elif index == 2:
             self.updateSelectChat ()
+            self.chatHistory = ""
+            self.chatRecipient = ""
+            self.updateChatDisplay ()
+            self.selectChatWidget.update ()
             self.setWindowTitle ('Select a Chat')
         elif index == 3:
             self.updateChatDisplay ()
-            self.setWindowTitle (f"{self.username}'s ChatBocks")
+            self.selectChatWidget.update ()
+
+            if self.chatRecipient == "General":
+                self.setWindowTitle ("General's ChatBocks")
+            else:
+                self.setWindowTitle (f"{self.username} & {self.allUserId[int(self.chatRecipient)][1]} 's ChatBocks")
+
+        self.stack.setCurrentIndex (index)
 
     def configureButtons (self):
         # Configures all the buttons that will "change the UI." The configuration is
@@ -107,22 +117,26 @@ class Client (QMainWindow):
     def setupUI (self):
         self.loginWidgetUI ()
         self.addAccountWidgetUI ()
-        #self.chatWidgetUI ()
+        self.chatWidgetUI ()
 
     def updateSelectChat (self):
         latestUser = self.selectChatButtonList [-1]
 
-        for user in self.allUserId:
-            if user[0] > int(latestUser):
+        if latestUser == 'General':
+            # There's nothing to update.
+            pass
+        elif latestUser != self.allUserId[-1][0]:
+            for i in range (latestUser + 1, len (self.allUserId)):
                 # Make a button for them, because a button does not exist.
+                user = self.allUserId[i]
                 buttonName = f'selectChatButton{user[0]}'
-                selectChatButton = QPushButton()
+                selectChatButton = QPushButton ()
                 selectChatButton.setText(f'Chat with {user[1]}')
                 selectChatButton.clicked.connect (self.selectChat)
                 selectChatButton.setObjectName (buttonName)
                 self.selectChatLayout.addWidget (selectChatButton)
-                self.selectChatButtonList.append(user[0])
-            
+                self.selectChatButtonList.append (user[0])
+
         self.selectChatWidget.update ()
 
     def loginWidgetUI (self):
@@ -208,21 +222,26 @@ class Client (QMainWindow):
 
         # TODO make scrollable
 
-        # Make buttons with the userID appended at the end.
-        if len (self.allUserId) != 0:
-            for user in self.allUserId:
-                buttonName = f'selectChatButton{user[0]}'
-                selectChatButton = QPushButton ()
-                selectChatButton.setText (f'Chat with {user[1]}')
-                selectChatButton.clicked.connect (self.selectChat)
-                selectChatButton.setObjectName (buttonName)
-                self.selectChatLayout.addWidget (selectChatButton)
-                self.selectChatButtonList.append(user[0])
-        else:
-            label = QLabel ()
-            label.setText ('No one has registered an account for you to chat with..')
-            self.selectChatLayout.addWidget (label)
+        # Make the general chat button.
+        buttonName = f'selectChatButtonGeneral'
+        selectChatButton = QPushButton ()
+        selectChatButton.setText (f'Chat with General')
+        selectChatButton.clicked.connect (self.selectChat)
+        selectChatButton.setObjectName (buttonName)
+        self.selectChatLayout.addWidget (selectChatButton)
+        self.selectChatButtonList.append ('General')
 
+        # Make buttons with the userID appended at the end.
+        for user in self.allUserId:
+            buttonName = f'selectChatButton{user[0]}'
+            selectChatButton = QPushButton ()
+            selectChatButton.setText (f'Chat with {user[1]}')
+            selectChatButton.clicked.connect (self.selectChat)
+            selectChatButton.setObjectName (buttonName)
+            self.selectChatLayout.addWidget (selectChatButton)
+            self.selectChatButtonList.append(user[0])
+
+        self.allUserId = ["General"] + self.allUserId
         self.selectChatWidget.setLayout (self.selectChatLayout)
 
     def chatWidgetUI (self):
@@ -258,7 +277,7 @@ class Client (QMainWindow):
         self.messageTextBox.setPlaceholderText ("Type your message...")
 
         # Configure the enter button and the enter action.
-        self.messageTextBox.returnPressed.connect (self.write)
+        self.messageTextBox.returnPressed.connect (self.writeMessage)
         self.sendButton = QPushButton ()
         self.sendButton.setText ("Enter")
         self.sendButton.clicked.connect (self.write)
@@ -328,8 +347,9 @@ class Client (QMainWindow):
 
     def updateChatDisplay (self):
         # This is for live chat updates.
-        #chatText = "".join (self.chatHistory)
+        self.chatBox.clear ()
         self.chatBox.setText (self.chatHistory)
+        self.chatWidget.update ()
 
         # This keeps the scroll bar of the chatbox from riding up with new chats.
         self.chatScroll.verticalScrollBar ().setValue (self.chatScroll.verticalScrollBar ().maximum ())
@@ -342,38 +362,47 @@ class Client (QMainWindow):
         # selectChatButton{userId}, we can parse the user id.
         self.chatRecipient = buttonName[16:]
 
-        self.write ()
-
-        # Place an event, waiting for the server to respond.
-        self.awaitSelectChatEvent = threading.Event ()
-        self.awaitSelectChatEvent.wait (timeout=5)
-
-        # When the receiver thread has received the server's response...
-        if self.awaitSelectChatEvent.isSet ():
-            # If the event set, switch to the chat display and update the
-            # chat history to include the past messages.
-            self.chatWidgetUI ()
+        if (self.chatRecipient == "General"):
+            self.write ()
             self.display (3)
+            print (f'Chatting with General')
         else:
-            print ("Timeout while waiting for server for dm information")
-        print (f'Chatting with: {self.chatRecipient}')
+            self.write ()
+
+            # Place an event, waiting for the server to respond.
+            self.awaitSelectChatEvent = threading.Event ()
+            self.awaitSelectChatEvent.wait (timeout=5)
+
+            # When the receiver thread has received the server's response...
+            if self.awaitSelectChatEvent.isSet ():
+                # If the event set, switch to the chat display and update the
+                # chat history to include the past messages.
+                self.display (3)
+            else:
+                print ("Timeout while waiting for server for DM information")
+
+            print (f'Chatting with user#{self.chatRecipient}: {self.allUserId[int(self.chatRecipient)][1]}')
 
 
     def backToSelectChat (self):
-        # Send a closed DM request to the server, waiting
+        # Send a closed DM request to the server, waiting.
         # for the server response.
-        self.closeDm = True
+        self.closeChat = True
 
         self.write ()
-        self.awaitCloseDM = threading.Event ()
-        self.awaitCloseDM.wait(timeout=5)
+        self.awaitCloseChat = threading.Event ()
+        self.awaitCloseChat.wait (timeout=5)
 
-        if (self.awaitCloseDM.isSet ()):
+        if (self.awaitCloseChat.isSet ()):
             self.updateSelectChat ()
             self.chatRecipient = ""
-            self.closeDm = False
+
+            self.closeChat = False
             self.display (2)
-        pass
+
+    def writeMessage (self):
+        if self.messageTextBox.text () != "":
+            self.write ()
 
 
     ####################################
@@ -400,18 +429,22 @@ class Client (QMainWindow):
                     self.chatHistory += (message[0])
                     self.updateChatDisplay ()
                 elif type == 'DMConfirm':
+                    self.chatHistory = ""
+
                     for msg in message:
                         self.chatHistory += msg.getContents()[0]
 
                     self.awaitSelectChatEvent.set ()
-                elif type == 'CloseDM':
-                    self.allUserId = message
-                    self.awaitCloseDM.set ()
+                elif type == 'CloseChat':
+                    self.allUserId = ['General'] + message
+                    self.awaitCloseChat.set ()
                 elif type == 'LoginConfirm':
                     # The server has confirmed that the user has a successful
                     # login.
                     self.username = self.usernameInput.text ()
                     self.allUserId = message
+
+                    print (f'logged in as {self.username}')
 
                     # Release the client's wait on the server to reply.
                     self.awaitLoginEvent.set ()
@@ -468,11 +501,14 @@ class Client (QMainWindow):
                 self.messageTextBox.clear ()
             else:
                 # Choosing a user to chat with.
-                if self.closeDm == True:
+                if self.closeChat == True:
                     message = ["null"]
-                    messageObj = pickle.dumps (Message ('CloseDM', message))
+                    messageObj = pickle.dumps (Message ('CloseChat', message))
                     self.client.send (messageObj)
-                if self.chatRecipient != "":
+                elif self.chatRecipient == "General":
+                    messageObj = pickle.dumps (Message ('SwitchToGeneral', []))
+                    self.client.send (messageObj)
+                elif self.chatRecipient != "":          # If the user exists but is not general.
                     message = [self.chatRecipient]
                     messageObj = pickle.dumps (Message ('SwitchToDM', message))
                     self.client.send (messageObj)
