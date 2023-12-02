@@ -70,6 +70,9 @@ class Account (object):
     def getLoggedIn(self):
         return self.isLoggedIn_
     
+    def getSocket(self):
+        return self.currentSocket_
+    
     def setLoggedIn(self, newStatus):
         self.isLoggedIn_ = newStatus
 
@@ -263,7 +266,7 @@ def handle (client):
                     recipient = allUsers[int(user.getPage()[1])]
 
                     # If recipient is logged in and viewing the page, display the message to them.
-                    if (recipient.getLoggedIn() and recipient.getPage()[1] == user.getUserID()):
+                    if (recipient.getLoggedIn() and (int(recipient.getPage()[1]) == int(user.getUserID()))):
                         recipient.getSocket().send(pickle.dumps(message))
 
                     # Always send message back for sender to display.
