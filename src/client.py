@@ -358,7 +358,7 @@ class Client (QMainWindow):
                     self.updateChatDisplay ()
                 elif type == 'Text':
                     # Your typical message between users.
-                    self.chatHistory.append (message)
+                    self.chatHistory.append (message[0])
                     self.updateChatDisplay ()
                 elif type == 'DMConfirm':
                     self.chatHistory = message

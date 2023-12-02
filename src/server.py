@@ -227,7 +227,7 @@ def handle (client):
                     client.send (denyObj)
 
             elif (message.getType() == "SwitchToDM"):
-                user.setPage(["DM", str(msgContents[0])])
+                user.setPage(["DM", msgContents[0]])
 
                 currentDM = None
 
@@ -248,7 +248,7 @@ def handle (client):
 
                 # If foundDM is still false, make the new DM.
                 if (not foundDM):
-                    currentDM = DM(user.getUserID, msgContents[0])
+                    currentDM = DM(user.getUserID(), msgContents[0])
                     DMs.append(currentDM)
 
                 # Give the client the messages it needs to display.
@@ -272,10 +272,10 @@ def handle (client):
                     # Add message to DM history. Need to find the DM first.
                     currentDM = None
                     for dm in DMs:
-                        if (dm.getUserPair()[0] == user.getUserID() and dm.getUserPair()[1] == msgContents[0]):
+                        if (dm.getUserPair()[0] == user.getUserID() and dm.getUserPair()[1] == user.getPage()[1]):
                             currentDM = dm
                             break
-                        elif (dm.getUserPair()[0] == msgContents[0] and dm.getUserPair()[1] == user.getUserID()):
+                        elif (dm.getUserPair()[0] == user.getPage()[1] and dm.getUserPair()[1] == user.getUserID()):
                             currentDM = dm
                             break
 
