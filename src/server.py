@@ -117,12 +117,12 @@ class DM (object):
 # Server Methods!
 ########################################################################
 def broadcast (message):
-    # Send a message to all the existing users who are currently connected
-    # to the server.
-    msgObj = pickle.dumps (Message ("", message))
+    # Send a message to all the users in general
+    msgObj = pickle.dumps (Message ("Text", message))
 
-    for client in connectedClients:
-        client.send (msgObj)
+    for account in allUsers:
+        if (account.getPage()[0] == "General"):
+            account.getSocket().send(msgObj)
 
 def handle (client):
     # Runs in a thread, constantly checks if the client has sent a new message
@@ -284,6 +284,9 @@ def handle (client):
 
                     currentDM.newMessage(msgContents)
 
+                elif (user.getPage()[0] == "General"):
+                    broadcast(msgContents[0])
+
             elif (message.getType() == "CloseDM"):
                 # Build user list to send to client.
                 userList = []
@@ -296,6 +299,10 @@ def handle (client):
                 client.send(dmListObj)
 
                 user.setPage(["DMList", None])
+
+            elif (message.getType() == "SwitchToGeneral"):
+                user.setPage("General", None)
+                broadcast(f'    -->{user.getUsername()} joined general chat')
 
 
         except Exception as e:
