@@ -118,7 +118,7 @@ class DM (object):
 ########################################################################
 def broadcast (message):
     # Send a message to all the users in general
-    msgObj = pickle.dumps (Message ("Text", message))
+    msgObj = pickle.dumps (Message ("Text", [message]))
 
     for account in allUsers:
         if (account.getPage()[0] == "General"):
@@ -285,9 +285,10 @@ def handle (client):
                     currentDM.newMessage(msgContents)
 
                 elif (user.getPage()[0] == "General"):
+                    print (f'in general chat: {str(msgContents)}')
                     broadcast(msgContents[0])
 
-            elif (message.getType() == "CloseDM"):
+            elif (message.getType() == "CloseChat"):
                 # Build user list to send to client.
                 userList = []
                 for account in allUsers:
@@ -295,14 +296,14 @@ def handle (client):
                         userList.append((account.getUserID(), account.getUsername()))
 
                 # Send updated list of all users to client
-                dmListObj = pickle.dumps(Message ("CloseDM", userList))
+                dmListObj = pickle.dumps(Message ("CloseChat", userList))
                 client.send(dmListObj)
 
                 user.setPage(["DMList", None])
 
             elif (message.getType() == "SwitchToGeneral"):
-                user.setPage("General", None)
-                broadcast(f'    -->{user.getUsername()} joined general chat')
+                user.setPage(["General", None])
+                broadcast(f'    -->{user.getUsername()} joined general chat!\n')
 
 
         except Exception as e:
@@ -321,7 +322,7 @@ def handle (client):
                 user.setPage(None)
 
 
-            print (f'{username} lost connection.')
+            print (f'{username} lost connection.\n')
 
             usernames.remove (username)
             client.close ()
