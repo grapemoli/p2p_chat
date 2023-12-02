@@ -352,11 +352,7 @@ class Client (QMainWindow):
                 message = msgObject.getContents ()
 
                 # Different types of messages require different actions.
-                if type == '':
-                    # Your typical message between users.
-                    self.chatHistory += (message[0])
-                    self.updateChatDisplay ()
-                elif type == 'Text':
+                if type == 'Text':
                     # Your typical message between users.
                     self.chatHistory += (message[0])
                     self.updateChatDisplay ()
