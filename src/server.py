@@ -288,6 +288,11 @@ def handle (client):
                     broadcast(msgContents[0])
 
             elif (message.getType() == "CloseDM"):
+
+                # Broadcast leaving if in general.
+                if(user.getPage()[0] == "General"):
+                    broadcast(f'    -->{user.getUsername()} left general chat')
+                    
                 # Build user list to send to client.
                 userList = []
                 for account in allUsers:
