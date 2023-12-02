@@ -260,7 +260,7 @@ def handle (client):
                 # If we are viewing a DM, text needs only sent to 1 other user.
                 if (user.getPage()[0] == "DM"):
 
-                    recipient = allUsers[user.getPage()[1]]
+                    recipient = allUsers[int(user.getPage()[1])]
 
                     # If recipient is logged in and viewing the page, display the message to them.
                     if (recipient.getLoggedIn() and recipient.getPage[1] == user.getUserID()):
@@ -272,10 +272,10 @@ def handle (client):
                     # Add message to DM history. Need to find the DM first.
                     currentDM = None
                     for dm in DMs:
-                        if (dm.getUserPair()[0] == user.getUserID and dm.getUserPair()[1] == msgContents[0]):
+                        if (dm.getUserPair()[0] == user.getUserID() and dm.getUserPair()[1] == msgContents[0]):
                             currentDM = dm
                             break
-                        elif (dm.getUserPair()[0] == msgContents[0] and dm.getUserPair()[1] == user.getUserID):
+                        elif (dm.getUserPair()[0] == msgContents[0] and dm.getUserPair()[1] == user.getUserID()):
                             currentDM = dm
                             break
 
