@@ -240,11 +240,11 @@ def handle (client):
                 for dm in DMs:
                     userpair = dm.getUserPair()
 
-                    if (userpair[0] == user.getUserID() and userpair[1] == msgContents[0]):
+                    if ((int(userpair[0]) == int(user.getUserID())) and (int(userpair[1]) == int(msgContents[0]))):
                         foundDM = True
                         currentDM = dm
                         break
-                    elif (userpair[0] == msgContents[0] and userpair[1] == user.getUserID()):
+                    elif ((int(userpair[0]) == int(msgContents[0])) and (int(userpair[1]) == int(user.getUserID()))):
                         foundDM = True
                         currentDM = dm
                         break
@@ -275,10 +275,10 @@ def handle (client):
                     # Add message to DM history. Need to find the DM first.
                     currentDM = None
                     for dm in DMs:
-                        if (dm.getUserPair()[0] == user.getUserID() and dm.getUserPair()[1] == user.getPage()[1]):
+                        if ((int(dm.getUserPair()[0]) == int(user.getUserID())) and (int(dm.getUserPair()[1]) == int(user.getPage()[1]))):
                             currentDM = dm
                             break
-                        elif (dm.getUserPair()[0] == user.getPage()[1] and dm.getUserPair()[1] == user.getUserID()):
+                        elif ((int(dm.getUserPair()[0]) == int(user.getPage()[1])) and (int(dm.getUserPair()[1]) == int(user.getUserID()))):
                             currentDM = dm
                             break
 
@@ -315,7 +315,6 @@ def handle (client):
 
 
             print (f'{username} lost connection.')
-            broadcast (f'{username} left the chat')
 
             usernames.remove (username)
             client.close ()
