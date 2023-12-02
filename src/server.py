@@ -251,12 +251,10 @@ def handle (client):
 
                 # If foundDM is still false, make the new DM.
                 if (not foundDM):
-                    print("making new dm")
                     currentDM = DM(user.getUserID(), msgContents[0])
                     DMs.append(currentDM)
 
                 # Give the client the messages it needs to display.
-                print(currentDM.getMessages())
                 msgObj = pickle.dumps(Message("DMConfirm", currentDM.getMessages()))
                 client.send(msgObj)
 
