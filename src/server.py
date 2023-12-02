@@ -289,7 +289,7 @@ def handle (client):
                 userList = []
                 for account in allUsers:
                     if (account != user):
-                        userList.append((account.getUserID, account.getUsername))
+                        userList.append((account.getUserID(), account.getUsername()))
 
                 # Send updated list of all users to client
                 dmListObj = pickle.dumps(Message ("CloseDM", userList))
