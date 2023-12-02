@@ -91,7 +91,7 @@ class DM (object):
     def __init__ (self, user1, user2):
         # Set the userPair.
         # Pair of IDs (ints) in a tuple (immutable).
-        self.userPair_ = {user1, user2}
+        self.userPair_ = (user1, user2)
 
         # Initialize the messages.
         self.messages_ = []
@@ -131,15 +131,12 @@ def handle (client):
             msgContents = message.getContents()
 
             # Different types of messages require different methods of handling.
-            if message.getType () == '':            # TODO: will need to add a recipient section in the message
-                                                    # TODO:  to send the message to the recipient
-                                                    # TODO: for many-to-many, give each DM a uid
-                # TODO: implement this
+            if message.getType () == '':
                 # The user sends a message to the server. The server saves the message in the appropriate
                 # DM class, and sends the to the recipients INCLUDING THE USER.
                 # Or--even better--each DM class has its own broadcast() function that sends to IT'S recipients
                 broadcast (msgContents[0])
-                print (f'msg: {msgContents}')       # TODO: delete
+                print (f'msg: {msgContents[0]}')       # TODO: delete
 
             if message.getType () == "LoginReq":
                 login = False
@@ -236,12 +233,15 @@ def handle (client):
 
                 # If DM history between these 2 users doesn't exist, create it.
                 foundDM = False
+
                 for dm in DMs:
-                    if (dm.getUserPair[0] == user.getUserID() and dm.getUserPair[1] == msgContents[0]):
+                    userpair = dm.getUserPair()
+
+                    if (userpair[0] == user.getUserID() and userpair[1] == msgContents[0]):
                         foundDM = True
                         currentDM = dm
                         break
-                    elif (dm.getUserPair[0] == msgContents[0] and dm.getUserPair[1] == user.getUserID()):
+                    elif (userpair[0] == msgContents[0] and userpair[1] == user.getUserID()):
                         foundDM = True
                         currentDM = dm
                         break
@@ -254,8 +254,6 @@ def handle (client):
                 # Give the client the messages it needs to display.
                 msgObj = pickle.dumps(Message("DMConfirm", currentDM.getMessages()))
                 client.send(msgObj)
-                
-                broadcast (pickle.dumps(Message('', f'   -->{account.getUsername()} has joined the chat.')))
 
             elif (message.getType() == "Text"):
 
@@ -274,10 +272,10 @@ def handle (client):
                     # Add message to DM history. Need to find the DM first.
                     currentDM = None
                     for dm in DMs:
-                        if (dm.getUserPair[0] == user.getUserID and dm.getUserPair[1] == msgContents[0]):
+                        if (dm.getUserPair()[0] == user.getUserID and dm.getUserPair()[1] == msgContents[0]):
                             currentDM = dm
                             break
-                        elif (dm.getUserPair[0] == msgContents[0] and dm.getUserPair[1] == user.getUserID):
+                        elif (dm.getUserPair()[0] == msgContents[0] and dm.getUserPair()[1] == user.getUserID):
                             currentDM = dm
                             break
 

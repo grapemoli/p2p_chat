@@ -81,6 +81,7 @@ class Client (QMainWindow):
         elif index == 2:
             self.setWindowTitle ('Select a Chat')
         elif index == 3:
+            self.updateChatDisplay ()
             self.setWindowTitle (f"{self.username}'s ChatBocks")
 
     def configureButtons (self):
@@ -103,6 +104,7 @@ class Client (QMainWindow):
     def setupUI (self):
         self.loginWidgetUI ()
         self.addAccountWidgetUI ()
+        #self.chatWidgetUI ()
 
     def loginWidgetUI (self):
         # This is the UI for the login widget initialized in the initializer.
@@ -322,7 +324,6 @@ class Client (QMainWindow):
 
         # When the receiver thread has received the server's response...
         if self.awaitSelectChatEvent.isSet ():
-
             # If the event set, switch to the chat display and update the
             # chat history to include the past messages.
             self.chatWidgetUI ()
@@ -355,7 +356,7 @@ class Client (QMainWindow):
                     # Your typical message between users.
                     self.chatHistory.append (message)
                     self.updateChatDisplay ()
-                elif type == 'Message':
+                elif type == 'Text':
                     # Your typical message between users.
                     self.chatHistory.append (message)
                     self.updateChatDisplay ()
@@ -415,7 +416,7 @@ class Client (QMainWindow):
             # Messages to other user(s).
             if self.messageTextBox.text () != "":
                 message = [f'{self.username}: {self.messageTextBox.text ()}\n']
-                messageObj = pickle.dumps (Message ("Message", message))
+                messageObj = pickle.dumps (Message ("Text", message))
                 self.client.send (messageObj)
 
                 # Sanitize.
