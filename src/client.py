@@ -277,7 +277,7 @@ class Client (QMainWindow):
         self.messageTextBox.setPlaceholderText ("Type your message...")
 
         # Configure the enter button and the enter action.
-        self.messageTextBox.returnPressed.connect (self.write)
+        self.messageTextBox.returnPressed.connect (self.writeMessage)
         self.sendButton = QPushButton ()
         self.sendButton.setText ("Enter")
         self.sendButton.clicked.connect (self.write)
@@ -400,6 +400,10 @@ class Client (QMainWindow):
             self.closeChat = False
             self.display (2)
 
+    def writeMessage (self):
+        if self.messageTextBox.text () != "":
+            self.write ()
+
 
     ####################################
     # Thread-Related Methods
@@ -439,6 +443,8 @@ class Client (QMainWindow):
                     # login.
                     self.username = self.usernameInput.text ()
                     self.allUserId = message
+
+                    print (f'logged in as {self.username}')
 
                     # Release the client's wait on the server to reply.
                     self.awaitLoginEvent.set ()

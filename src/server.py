@@ -121,8 +121,11 @@ def broadcast (message):
     msgObj = pickle.dumps (Message ("Text", [message]))
 
     for account in allUsers:
-        if (account.getPage()[0] == "General"):
-            account.getSocket().send(msgObj)
+        if account.getLoggedIn():
+            print (f'username of loggedin: {account.getUsername()} with msg: {message}')        # TODO: delete
+
+            if (account.getPage()[0] == "General"):
+                account.getSocket().send(msgObj)
 
 def handle (client):
     # Runs in a thread, constantly checks if the client has sent a new message
@@ -223,8 +226,7 @@ def handle (client):
 
                     # Set the username of the client in the usernames list.
                     index = connectedClients.index( client)
-                    print (f'Account created: {usernames[index]} nicknamed {newAccount.getUsername()}')
-                    usernames[index] = msgContents[0]
+                    print (f'Account created: {usernames[index]} created {newAccount.getUsername()}')
                 elif accountExists == True:
                     denyObj = pickle.dumps (Message ("CreateFailure", f'{msgContents[0]} already exists!'))
                     client.send (denyObj)
@@ -303,6 +305,7 @@ def handle (client):
 
             elif (message.getType() == "SwitchToGeneral"):
                 user.setPage(["General", None])
+                print (f'page for {user.getUsername()}: {str(user.getPage())}')
                 broadcast(f'    -->{user.getUsername()} joined general chat!\n')
 
 
