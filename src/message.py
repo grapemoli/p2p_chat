@@ -8,6 +8,7 @@
 # LoginReq - requests server to see if credentials are correct
 #          - content: '{username},{password}'
 # LoginConfirm - response from server that credentials are valid
+#              - content: {[userId, username],{userId2, username2},...}
 # LoginFailure - response from server that credentials are invalid
 #              - content: gives details on why the login failed
 #

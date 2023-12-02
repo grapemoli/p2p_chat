@@ -64,7 +64,6 @@ class Client (QMainWindow):
     def display (self, index):
         # For switching between different UIs with only one window, we simply
         # change to the UI's corresponding index in self.stack.
-        self.stack.setCurrentIndex (index)
 
         # Cleansing.
         self.newUsernameInput.clear ()
@@ -82,10 +81,17 @@ class Client (QMainWindow):
             self.setWindowTitle ('Create an Account')
         elif index == 2:
             self.updateSelectChat ()
+            self.chatHistory = ""
+            self.chatRecipient = ""
+            self.updateChatDisplay ()
+            self.selectChatWidget.update ()
             self.setWindowTitle ('Select a Chat')
         elif index == 3:
             self.updateChatDisplay ()
-            self.setWindowTitle (f"{self.username}'s ChatBocks")
+            self.selectChatWidget.update ()
+            self.setWindowTitle (f"{self.username} & {self.allUserId[int(self.chatRecipient) - 1][1]} 's ChatBocks")
+
+        self.stack.setCurrentIndex (index)
 
     def configureButtons (self):
         # Configures all the buttons that will "change the UI." The configuration is
@@ -107,7 +113,7 @@ class Client (QMainWindow):
     def setupUI (self):
         self.loginWidgetUI ()
         self.addAccountWidgetUI ()
-        #self.chatWidgetUI ()
+        self.chatWidgetUI ()
 
     def updateSelectChat (self):
         latestUser = self.selectChatButtonList [-1]
@@ -328,8 +334,9 @@ class Client (QMainWindow):
 
     def updateChatDisplay (self):
         # This is for live chat updates.
-        #chatText = "".join (self.chatHistory)
+        self.chatBox.clear ()
         self.chatBox.setText (self.chatHistory)
+        self.chatWidget.update ()
 
         # This keeps the scroll bar of the chatbox from riding up with new chats.
         self.chatScroll.verticalScrollBar ().setValue (self.chatScroll.verticalScrollBar ().maximum ())
@@ -352,15 +359,14 @@ class Client (QMainWindow):
         if self.awaitSelectChatEvent.isSet ():
             # If the event set, switch to the chat display and update the
             # chat history to include the past messages.
-            self.chatWidgetUI ()
             self.display (3)
         else:
             print ("Timeout while waiting for server for dm information")
-        print (f'Chatting with: {self.chatRecipient}')
+        print (f'Chatting with user#{self.chatRecipient}: {self.allUserId[int(self.chatRecipient) - 1][1]}')
 
 
     def backToSelectChat (self):
-        # Send a closed DM request to the server, waiting
+        # Send a closed DM request to the server, waiting.
         # for the server response.
         self.closeDm = True
 
@@ -369,8 +375,10 @@ class Client (QMainWindow):
         self.awaitCloseDM.wait(timeout=5)
 
         if (self.awaitCloseDM.isSet ()):
+
             self.updateSelectChat ()
             self.chatRecipient = ""
+
             self.closeDm = False
             self.display (2)
         pass
@@ -400,6 +408,8 @@ class Client (QMainWindow):
                     self.chatHistory += (message[0])
                     self.updateChatDisplay ()
                 elif type == 'DMConfirm':
+                    self.chatHistory = ""
+
                     for msg in message:
                         self.chatHistory += msg.getContents()[0]
 
