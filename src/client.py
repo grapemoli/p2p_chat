@@ -20,7 +20,7 @@ class Client (QMainWindow):
 
         # Initialize proper data structures.
         self.allUserId = []
-        self.chatHistory = []
+        self.chatHistory = ""
         self.chatRecipient = ""
         self.messageTextBox = QLineEdit ()
 
@@ -302,8 +302,8 @@ class Client (QMainWindow):
 
     def updateChatDisplay (self):
         # This is for live chat updates.
-        chatText = "".join (self.chatHistory)
-        self.chatBox.setText (chatText)
+        #chatText = "".join (self.chatHistory)
+        self.chatBox.setText (self.chatHistory)
 
         # This keeps the scroll bar of the chatbox from riding up with new chats.
         self.chatScroll.verticalScrollBar ().setValue (self.chatScroll.verticalScrollBar ().maximum ())
@@ -354,14 +354,16 @@ class Client (QMainWindow):
                 # Different types of messages require different actions.
                 if type == '':
                     # Your typical message between users.
-                    self.chatHistory.append (message)
+                    self.chatHistory += (message[0])
                     self.updateChatDisplay ()
                 elif type == 'Text':
                     # Your typical message between users.
-                    self.chatHistory.append (message[0])
+                    self.chatHistory += (message[0])
                     self.updateChatDisplay ()
                 elif type == 'DMConfirm':
-                    self.chatHistory = message
+                    for msg in message:
+                        self.chatHistory += msg.getContents()[0]
+
                     self.awaitSelectChatEvent.set ()
                 elif type == 'LoginConfirm':
                     # The server has confirmed that the user has a successful
