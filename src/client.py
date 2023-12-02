@@ -4,6 +4,7 @@ import pickle
 import traceback
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction, QIcon
 from message import Message
 
 class Client (QMainWindow):
@@ -21,8 +22,9 @@ class Client (QMainWindow):
         # Initialize proper data structures.
         self.allUserId = []
         self.chatHistory = ""
-        self.chatRecipient = ""
         self.messageTextBox = QLineEdit ()
+        self.closeDm = False
+        self.selectChatButtonList = []      # The users who are already represented with a button.
 
         # Set the window properties (title and initial size)
         self.setWindowTitle ("ChatBocks Login")
@@ -79,6 +81,7 @@ class Client (QMainWindow):
         elif index == 1:
             self.setWindowTitle ('Create an Account')
         elif index == 2:
+            self.updateSelectChat ()
             self.setWindowTitle ('Select a Chat')
         elif index == 3:
             self.updateChatDisplay ()
@@ -105,6 +108,22 @@ class Client (QMainWindow):
         self.loginWidgetUI ()
         self.addAccountWidgetUI ()
         #self.chatWidgetUI ()
+
+    def updateSelectChat (self):
+        latestUser = self.selectChatButtonList [-1]
+
+        for user in self.allUserId:
+            if user[0] > int(latestUser):
+                # Make a button for them, because a button does not exist.
+                buttonName = f'selectChatButton{user[0]}'
+                selectChatButton = QPushButton()
+                selectChatButton.setText(f'Chat with {user[1]}')
+                selectChatButton.clicked.connect (self.selectChat)
+                selectChatButton.setObjectName (buttonName)
+                self.selectChatLayout.addWidget (selectChatButton)
+                self.selectChatButtonList.append(user[0])
+            
+        self.selectChatWidget.update ()
 
     def loginWidgetUI (self):
         # This is the UI for the login widget initialized in the initializer.
@@ -185,7 +204,7 @@ class Client (QMainWindow):
         self.addAccountWidget.setLayout (layout)
 
     def selectChatWidgetUI (self):
-        layout = QVBoxLayout ()
+        self.selectChatLayout = QVBoxLayout ()
 
         # TODO make scrollable
 
@@ -197,19 +216,26 @@ class Client (QMainWindow):
                 selectChatButton.setText (f'Chat with {user[1]}')
                 selectChatButton.clicked.connect (self.selectChat)
                 selectChatButton.setObjectName (buttonName)
-                layout.addWidget (selectChatButton)
+                self.selectChatLayout.addWidget (selectChatButton)
+                self.selectChatButtonList.append(user[0])
         else:
             label = QLabel ()
             label.setText ('No one has registered an account for you to chat with..')
-            layout.addWidget (label)
+            self.selectChatLayout.addWidget (label)
 
-        self.selectChatWidget.setLayout (layout)
+        self.selectChatWidget.setLayout (self.selectChatLayout)
 
     def chatWidgetUI (self):
         # This is the UI for the chatWidget.
         # Arrangement of the widgets
         layout = QVBoxLayout ()
         layoutTextInput = QGridLayout ()
+
+        # Make back button
+        backButton = QPushButton ()
+        backButton.setText ("BACK")
+        backButton.clicked.connect (self.backToSelectChat)
+        layout.addWidget (backButton)
 
         # Chatbox displays all sent and received messages.
         self.chatBox = QLabel ()
@@ -259,7 +285,7 @@ class Client (QMainWindow):
             # Make the client wait for us to receive the reply from the server before
             # doing anything.
             self.awaitLoginEvent = threading.Event ()
-            self.awaitLoginEvent.wait (timeout=20)
+            self.awaitLoginEvent.wait (timeout=5)
 
             # When the receiver thread has received the server's response...
             if self.awaitLoginEvent.isSet ():
@@ -333,6 +359,23 @@ class Client (QMainWindow):
         print (f'Chatting with: {self.chatRecipient}')
 
 
+    def backToSelectChat (self):
+        # Send a closed DM request to the server, waiting
+        # for the server response.
+        self.closeDm = True
+
+        self.write ()
+        self.awaitCloseDM = threading.Event ()
+        self.awaitCloseDM.wait(timeout=5)
+
+        if (self.awaitCloseDM.isSet ()):
+            self.updateSelectChat ()
+            self.chatRecipient = ""
+            self.closeDm = False
+            self.display (2)
+        pass
+
+
     ####################################
     # Thread-Related Methods
     ####################################
@@ -361,6 +404,9 @@ class Client (QMainWindow):
                         self.chatHistory += msg.getContents()[0]
 
                     self.awaitSelectChatEvent.set ()
+                elif type == 'CloseDM':
+                    self.allUserId = message
+                    self.awaitCloseDM.set ()
                 elif type == 'LoginConfirm':
                     # The server has confirmed that the user has a successful
                     # login.
@@ -422,6 +468,10 @@ class Client (QMainWindow):
                 self.messageTextBox.clear ()
             else:
                 # Choosing a user to chat with.
+                if self.closeDm == True:
+                    message = ["null"]
+                    messageObj = pickle.dumps (Message ('CloseDM', message))
+                    self.client.send (messageObj)
                 if self.chatRecipient != "":
                     message = [self.chatRecipient]
                     messageObj = pickle.dumps (Message ('SwitchToDM', message))
