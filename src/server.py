@@ -185,8 +185,6 @@ def handle (client):
                     elif (account.getUsername () == msgContents [0]):
                         # This means the user must have typed the wrong password to an
                         # existing account.
-
-                        # TODO: This does not acount for duplicate usernames. May want to continue instead of break. 
                         accountExists = True
                         break
 
@@ -203,11 +201,7 @@ def handle (client):
 
             elif (message.getType () == "CreateAccount"):
 
-                # Add the user to the connected clients list.
-
-                # TODO only let unique usernames be made into an account:
-                ################# REFACTOR AS NEEDED ##############################
-                ###### THIS WAS HAPHAZARDLY PUT TOGETHER TO TEST CLIENT
+                # Add the user to the connected clients list if the username is unique.
                 accountExists = False
 
                 for account in allUsers:
@@ -314,6 +308,15 @@ def handle (client):
                 user.setPage(["General", None])
                 print (f'page for {user.getUsername()}: {str(user.getPage())}')
                 broadcast(f'    -->{user.getUsername()} joined general chat!\n')
+
+            elif (message.getType() == "Poke"):
+                # Get the user id in the message, and send the poke message to the user
+                # IF they are logged in.
+                recipient = allUsers[int(msgContents[0])]
+
+                if (recipient.getLoggedIn()):
+                    pokeObj = pickle.dumps(Message("Poke", [user.getUserID ()]))
+                    recipient.getSocket ().send (pokeObj)
 
 
         except Exception as e:

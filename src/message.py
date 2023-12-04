@@ -19,8 +19,11 @@
 # CreateFailure - negative response from server
 #
 #
-# "Text" - a message sent from a user to another user
-#    - content: '{username}: {message}'
+# Text - a message sent from a user to another user
+#      - content: '{username}: {message}'
+# Poke - tells the server to play the 'poke' sfx if the user is logged on.
+#      - content (from client): '{uid of the one to be poked}'
+#      - content (from server): '{uid of the poker}'
 #
 #
 # SwitchToDM - tells the server that the user to chat with

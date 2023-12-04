@@ -3,15 +3,35 @@ import threading
 import pickle
 import traceback
 from PyQt6.QtWidgets import *
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QIcon
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtMultimedia import QSoundEffect
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from message import Message
 
+playSound = "" # Refers to the key in the self.sounds directory.
+
+####################################
+# Class: Worker
+# Takes care of checking for SFX in the GUI.
+####################################
+class Worker (QObject):
+    end = pyqtSignal ()
+    sfx = pyqtSignal ()
+
+    def run (self):
+        if playSound != "":
+            self.sfx.emit ()
+        self.end.emit ()
+
+
+####################################
+# Class: Client
+# The GUI for the Client.
+####################################
 class Client (QMainWindow):
     username = ""
-    client = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
-    client.connect (('127.0.0.1', 25565))   # TODO: 50.90.134.19
-
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect(('127.0.0.1', 25565))
 
     ####################################
     # Initialization
@@ -38,7 +58,6 @@ class Client (QMainWindow):
         self.mainWindow.setLayout (self.stack)
         self.setCentralWidget (self.mainWindow)
 
-
         # Create the other UI's and put them in a list to keep track of them. This
         # list is also what we use to switch between the UI's.
         self.loginWidget = QWidget ()
@@ -52,6 +71,19 @@ class Client (QMainWindow):
         self.stack.addWidget (self.addAccountWidget)
         self.stack.addWidget (self.selectChatWidget)
         self.stack.addWidget (self.chatWidget)
+
+        # Create sounds.
+        self.sounds = {
+            'poke': QSoundEffect ()
+        }
+
+        self.sounds.get ('poke').setSource (QUrl.fromLocalFile ("./Audio/poke.wav"))
+        self.SFXThread = QThread ()
+        self.SFXWorker = Worker ()
+        self.SFXWorker.moveToThread (self.SFXThread)
+        self.SFXThread.started.connect (self.SFXWorker.run)
+        self.SFXWorker.sfx.connect (self.play)
+        self.SFXWorker.end.connect (self.SFXThread.quit)
 
         # Begin the display at the login page.
         self.configureButtons ()
@@ -91,9 +123,10 @@ class Client (QMainWindow):
             self.selectChatWidget.update ()
 
             if self.chatRecipient == "General":
+                self.pokeButton.hide ()
                 self.setWindowTitle ("General's ChatBocks")
             else:
-                print ("creating chatbocks")
+                self.pokeButton.show ()
                 userIndex = int(self.chatRecipient)
 
                 if userIndex == self.allUserId[userIndex - 1][0]:
@@ -254,12 +287,21 @@ class Client (QMainWindow):
         # Arrangement of the widgets
         layout = QVBoxLayout ()
         layoutTextInput = QGridLayout ()
+        buttonLayout = QGridLayout ()
 
-        # Make back button
+        # Make back button.
         backButton = QPushButton ()
         backButton.setText ("BACK")
         backButton.clicked.connect (self.backToSelectChat)
-        layout.addWidget (backButton)
+        buttonLayout.addWidget (backButton, 0, 0, 1, 1)
+
+        # Make poke button.
+        self.pokeButton = QPushButton ()
+        self.pokeButton.setText (f'POKE')
+        self.pokeButton.clicked.connect (self.poke)
+        buttonLayout.addWidget (self.pokeButton, 0, 1, 1, 1)
+
+        layout.addLayout (buttonLayout)
 
         # Chatbox displays all sent and received messages.
         self.chatBox = QLabel ()
@@ -352,7 +394,6 @@ class Client (QMainWindow):
 
     def updateChatDisplay (self):
         # This is for live chat updates.
-        print ("updatechatdisplay")
         self.chatBox.clear ()
         self.chatBox.setText (self.chatHistory)
         self.chatWidget.update ()
@@ -409,6 +450,18 @@ class Client (QMainWindow):
         if self.messageTextBox.text () != "":
             self.write ()
 
+    def poke (self):
+        print (f'poked {self.chatRecipient}')
+        global playSound
+        playSound = 'poke'
+        self.write ()
+
+    def play (self):
+        # Upon playing the sound, reset the play sound attribute.
+        global playSound
+        self.sounds.get (playSound).play ()
+        playSound = ""
+
 
     ####################################
     # Thread-Related Methods
@@ -434,7 +487,6 @@ class Client (QMainWindow):
                     self.chatHistory += (message[0])
                     self.updateChatDisplay ()
                 elif type == 'DMConfirm':
-                    print ("got the dmconfirm message")
                     self.chatHistory = ""
 
                     for msg in message:
@@ -463,6 +515,11 @@ class Client (QMainWindow):
                 elif type == 'CreateFailure':
                     self.addAccountValidationLabel.setText (message)
                     self.awaitAddUserEvent.set ()
+                elif type == 'Poke':
+                    global playSound
+                    playSound = 'poke'
+                    self.SFXThread.start ()
+                    print (f'Got poked by {message[0]}')
                 else:
                     pass
             except Exception as e:
@@ -480,6 +537,7 @@ class Client (QMainWindow):
 
         # Messages that can be sent if the user is not logged in are login and create account
         # messages.
+
         if self.username == "":
             # Login: does the user exist and do they have the right credentials?
             if self.usernameInput.text () != "" and self.passwordInput.text () != "":
@@ -497,6 +555,7 @@ class Client (QMainWindow):
         # The client can only send these type of messages to the server if the user is logged in.
         # This acts as a privilege scoping.
         elif self.username != "":
+            global playSound
             # Messages to other user(s).
             if self.messageTextBox.text () != "":
                 message = [f'{self.username}: {self.messageTextBox.text ()}\n']
@@ -505,16 +564,22 @@ class Client (QMainWindow):
 
                 # Sanitize.
                 self.messageTextBox.clear ()
+            elif playSound == 'poke':
+                pokeObj = pickle.dumps (Message ("Poke", self.chatRecipient))
+                self.client.send (pokeObj)
+                playSound = ''
             else:
-                # Choosing a user to chat with.
+                # Closing the chat.
                 if self.closeChat == True:
                     message = ["null"]
                     messageObj = pickle.dumps (Message ('CloseChat', message))
                     self.client.send (messageObj)
+                # User moves to to general chat.
                 elif self.chatRecipient == "General":
                     messageObj = pickle.dumps (Message ('SwitchToGeneral', []))
                     self.client.send (messageObj)
-                elif self.chatRecipient != "":          # If the user exists but is not general.
+                # If the user exists a non-general chat.
+                elif self.chatRecipient != "":
                     message = [self.chatRecipient]
                     messageObj = pickle.dumps (Message ('SwitchToDM', message))
                     self.client.send (messageObj)
