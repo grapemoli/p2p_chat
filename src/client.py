@@ -93,7 +93,13 @@ class Client (QMainWindow):
             if self.chatRecipient == "General":
                 self.setWindowTitle ("General's ChatBocks")
             else:
-                self.setWindowTitle (f"{self.username} & {self.allUserId[int(self.chatRecipient)][1]} 's ChatBocks")
+                print ("creating chatbocks")
+                userIndex = int(self.chatRecipient)
+
+                if userIndex == self.allUserId[userIndex - 1][0]:
+                    userIndex -= 1
+
+                self.setWindowTitle (f"{self.username} & {self.allUserId[userIndex][1]} 's ChatBocks")
 
         self.stack.setCurrentIndex (index)
 
@@ -241,7 +247,6 @@ class Client (QMainWindow):
             self.selectChatLayout.addWidget (selectChatButton)
             self.selectChatButtonList.append(user[0])
 
-        self.allUserId = ["General"] + self.allUserId
         self.selectChatWidget.setLayout (self.selectChatLayout)
 
     def chatWidgetUI (self):
@@ -347,6 +352,7 @@ class Client (QMainWindow):
 
     def updateChatDisplay (self):
         # This is for live chat updates.
+        print ("updatechatdisplay")
         self.chatBox.clear ()
         self.chatBox.setText (self.chatHistory)
         self.chatWidget.update ()
@@ -378,10 +384,9 @@ class Client (QMainWindow):
                 # If the event set, switch to the chat display and update the
                 # chat history to include the past messages.
                 self.display (3)
+                print (f'Chatting with user#{self.chatRecipient}')
             else:
                 print ("Timeout while waiting for server for DM information")
-
-            print (f'Chatting with user#{self.chatRecipient}: {self.allUserId[int(self.chatRecipient)][1]}')
 
 
     def backToSelectChat (self):
@@ -429,6 +434,7 @@ class Client (QMainWindow):
                     self.chatHistory += (message[0])
                     self.updateChatDisplay ()
                 elif type == 'DMConfirm':
+                    print ("got the dmconfirm message")
                     self.chatHistory = ""
 
                     for msg in message:
@@ -436,7 +442,7 @@ class Client (QMainWindow):
 
                     self.awaitSelectChatEvent.set ()
                 elif type == 'CloseChat':
-                    self.allUserId = ['General'] + message
+                    self.allUserId = message
                     self.awaitCloseChat.set ()
                 elif type == 'LoginConfirm':
                     # The server has confirmed that the user has a successful
