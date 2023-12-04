@@ -294,6 +294,10 @@ def handle (client):
 
             elif (message.getType() == "CloseChat"):
 
+                # Tell other users we left chat.
+                if (user.getPage()[0] == "General"):
+                    broadcast(f'    <--{user.getUsername()} left general chat.\n')
+
                 # Build user list to send to client.
                 userList = []
                 for account in allUsers:
