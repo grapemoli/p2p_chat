@@ -31,7 +31,7 @@ class Worker (QObject):
 class Client (QMainWindow):
     username = ""
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect(('127.0.0.1', 25565))  # TODO: 50.90.134.19
+    client.connect(('127.0.0.1', 25565))
 
     ####################################
     # Initialization
@@ -84,8 +84,6 @@ class Client (QMainWindow):
         self.SFXThread.started.connect (self.SFXWorker.run)
         self.SFXWorker.sfx.connect (self.play)
         self.SFXWorker.end.connect (self.SFXThread.quit)
-        #self.SFXWorker.end.connect (self.SFXWorker.deleteLater)
-        #self.SFXThread.end.connect (self.SFXThread.deleteLater)
 
         # Begin the display at the login page.
         self.configureButtons ()
