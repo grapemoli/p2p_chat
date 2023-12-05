@@ -5,7 +5,7 @@ import threading
 from message import Message
 
 host = '0.0.0.0'
-port = 25566
+port = 25565
 
 server = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
 server.bind ((host, port))
