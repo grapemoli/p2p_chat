@@ -2,6 +2,7 @@ import socket
 import threading
 import pickle
 import traceback
+import os
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtMultimedia import QSoundEffect
@@ -31,7 +32,7 @@ class Worker (QObject):
 class Client (QMainWindow):
     username = ""
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect(('127.0.0.1', 25565))
+    client.connect(('50.90.134.19', 25565))
 
     ####################################
     # Initialization
@@ -78,7 +79,11 @@ class Client (QMainWindow):
             'poke': QSoundEffect ()
         }
 
-        self.sounds.get ('poke').setSource (QUrl.fromLocalFile ("./Audio/poke.wav"))
+        rootDir = os.path.abspath (os.path.dirname (__file__))
+        soundPath = os.path.join (rootDir, "Audio", "poke.wav")
+        print(soundPath)
+
+        self.sounds.get ('poke').setSource (QUrl.fromLocalFile (soundPath))
         self.SFXThread = QThread ()
         self.SFXWorker = Worker ()
         self.SFXWorker.moveToThread (self.SFXThread)
