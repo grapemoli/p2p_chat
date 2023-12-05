@@ -32,7 +32,7 @@ class Worker (QObject):
 class Client (QMainWindow):
     username = ""
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect(('127.0.0.1', 25565))
+    client.connect(('127.0.0.1', 25565)) # This becomes server IP in working application
 
     ####################################
     # Initialization
@@ -499,7 +499,7 @@ class Client (QMainWindow):
         while True:
             try:
                 # Unserialize the server's message.
-                msgObject = pickle.loads (self.client.recv (1024))
+                msgObject = pickle.loads (self.client.recv (16384))
                 type = msgObject.getType ()
                 message = msgObject.getContents ()
 
