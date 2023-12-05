@@ -9,7 +9,6 @@ from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from message import Message
 
 playSound = "" # Refers to the key in the self.sounds directory.
-pokedBy = ""
 
 ####################################
 # Class: Worker
@@ -113,7 +112,6 @@ class Client (QMainWindow):
         elif index == 1:
             self.setWindowTitle ('Create an Account')
         elif index == 2:
-            print ("in display")
             self.updateSelectChat ()
             self.chatHistory = ""
             self.chatRecipient = ""
@@ -461,11 +459,9 @@ class Client (QMainWindow):
     def play (self):
         # Upon playing the sound, reset the play sound attribute.
         global playSound
-        global pokedBy
         self.sounds.get (playSound).play ()
 
         playSound = ""
-        pokedBy = ""
 
 
     ####################################
@@ -522,13 +518,7 @@ class Client (QMainWindow):
                     self.awaitAddUserEvent.set ()
                 elif type == 'Poke':
                     global playSound
-                    global pokedBy
                     playSound = 'poke'
-
-                    for user in self.allUserId:
-                        if user[0] == message[0]:
-                            pokedBy = user[1]
-                            break
 
                     self.SFXThread.start ()
                     print (f'Got poked by {message[0]}')
