@@ -161,20 +161,30 @@ class Client (QMainWindow):
     def updateSelectChat (self):
         latestUser = self.selectChatButtonList [-1]
 
-        if latestUser == 'General':
-            # There's nothing to update.
-            pass
-        elif latestUser != self.allUserId[-1][0]:
-            for i in range (latestUser + 1, len (self.allUserId)):
-                # Make a button for them, because a button does not exist.
-                user = self.allUserId[i]
-                buttonName = f'selectChatButton{user[0]}'
-                selectChatButton = QPushButton ()
-                selectChatButton.setText(f'Chat with {user[1]}')
-                selectChatButton.clicked.connect (self.selectChat)
-                selectChatButton.setObjectName (buttonName)
-                self.selectChatLayout.addWidget (selectChatButton)
-                self.selectChatButtonList.append (user[0])
+        if latestUser == "General":
+            if len (self.selectChatButtonList) == 1:
+                for i in range (0, len (self.allUserId)):
+                    # Make a button for them, because a button does not exist.
+                    user = self.allUserId[i]
+                    buttonName = f'selectChatButton{user[0]}'
+                    selectChatButton = QPushButton()
+                    selectChatButton.setText(f'Chat with {user[1]}')
+                    selectChatButton.clicked.connect(self.selectChat)
+                    selectChatButton.setObjectName(buttonName)
+                    self.selectChatLayout.addWidget(selectChatButton)
+                    self.selectChatButtonList.append(user[0])
+        else:
+            for i in range (latestUser - 1, len (self.allUserId)):
+                user = self.allUserId [i]
+                if user[0] not in self.selectChatButtonList:
+                    # Make a button for them, because a button does not exist.
+                    buttonName = f'selectChatButton{user[0]}'
+                    selectChatButton = QPushButton ()
+                    selectChatButton.setText(f'Chat with {user[1]}')
+                    selectChatButton.clicked.connect (self.selectChat)
+                    selectChatButton.setObjectName (buttonName)
+                    self.selectChatLayout.addWidget (selectChatButton)
+                    self.selectChatButtonList.append (user[0])
 
         self.selectChatWidget.update ()
 
@@ -440,7 +450,6 @@ class Client (QMainWindow):
         self.awaitCloseChat.wait (timeout=5)
 
         if (self.awaitCloseChat.isSet ()):
-            self.updateSelectChat ()
             self.chatRecipient = ""
 
             self.closeChat = False
@@ -460,6 +469,7 @@ class Client (QMainWindow):
         # Upon playing the sound, reset the play sound attribute.
         global playSound
         self.sounds.get (playSound).play ()
+
         playSound = ""
 
 
@@ -518,6 +528,7 @@ class Client (QMainWindow):
                 elif type == 'Poke':
                     global playSound
                     playSound = 'poke'
+
                     self.SFXThread.start ()
                     print (f'Got poked by {message[0]}')
                 else:
