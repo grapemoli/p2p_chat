@@ -31,7 +31,7 @@ class Worker (QObject):
 class Client (QMainWindow):
     username = ""
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect(('127.0.0.1', 25565))
+    client.connect(('127.0.0.1', 25566))
 
     ####################################
     # Initialization
@@ -43,6 +43,7 @@ class Client (QMainWindow):
         self.allUserId = []
         self.chatHistory = ""
         self.messageTextBox = QLineEdit ()
+        self.writing = False
         self.closeChat = False
         self.selectChatButtonList = []      # The users who are already represented with a button.
 
@@ -337,7 +338,7 @@ class Client (QMainWindow):
         self.messageTextBox.returnPressed.connect (self.writeMessage)
         self.sendButton = QPushButton ()
         self.sendButton.setText ("Enter")
-        self.sendButton.clicked.connect (self.write)
+        self.sendButton.clicked.connect (self.writeMessage)
 
         # Format the elements in a line.
         layoutTextInput.addWidget (self.messageTextBox, 0, 0)
@@ -472,6 +473,12 @@ class Client (QMainWindow):
 
         playSound = ""
 
+    def writeMessage (self):
+        self.writing = True
+
+        if self.messageTextBox.text () != "":
+            self.write ()
+
 
     ####################################
     # Thread-Related Methods
@@ -572,10 +579,11 @@ class Client (QMainWindow):
                 pokeObj = pickle.dumps(Message("Poke", self.chatRecipient))
                 self.client.send(pokeObj)
                 playSound = ''
-            elif self.messageTextBox.text () != "":
+            elif self.writing == True:
                 message = [f'{self.username}: {self.messageTextBox.text ()}\n']
                 messageObj = pickle.dumps (Message ("Text", message))
                 self.client.send (messageObj)
+                self.writing = False
 
                 # Sanitize.
                 self.messageTextBox.clear ()
