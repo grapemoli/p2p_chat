@@ -566,26 +566,12 @@ class Client (QMainWindow):
         # The client can only send these type of messages to the server if the user is logged in.
         # This acts as a privilege scoping.
         elif self.username != "":
-            # These are sorted based on precedent.
             global playSound
-
+            # Messages to other user(s).
             if playSound == 'poke':
-                pokeObj = pickle.dumps (Message ("Poke", self.chatRecipient))
-                self.client.send (pokeObj)
+                pokeObj = pickle.dumps(Message("Poke", self.chatRecipient))
+                self.client.send(pokeObj)
                 playSound = ''
-            elif self.closeChat == True:
-                message = ["null"]
-                messageObj = pickle.dumps (Message ('CloseChat', message))
-                self.client.send (messageObj)
-                # User moves to to general chat.
-            elif self.chatRecipient == "General":
-                messageObj = pickle.dumps (Message ('SwitchToGeneral', []))
-                self.client.send (messageObj)
-            # If the user exists a non-general chat.
-            elif self.chatRecipient != "":
-                message = [self.chatRecipient]
-                messageObj = pickle.dumps (Message ('SwitchToDM', message))
-                self.client.send (messageObj)
             elif self.messageTextBox.text () != "":
                 message = [f'{self.username}: {self.messageTextBox.text ()}\n']
                 messageObj = pickle.dumps (Message ("Text", message))
@@ -593,6 +579,21 @@ class Client (QMainWindow):
 
                 # Sanitize.
                 self.messageTextBox.clear ()
+            else:
+                # Closing the chat.
+                if self.closeChat == True:
+                    message = ["null"]
+                    messageObj = pickle.dumps (Message ('CloseChat', message))
+                    self.client.send (messageObj)
+                # User moves to to general chat.
+                elif self.chatRecipient == "General":
+                    messageObj = pickle.dumps (Message ('SwitchToGeneral', []))
+                    self.client.send (messageObj)
+                # If the user exists a non-general chat.
+                elif self.chatRecipient != "":
+                    message = [self.chatRecipient]
+                    messageObj = pickle.dumps (Message ('SwitchToDM', message))
+                    self.client.send (messageObj)
 
 
     def start (self):
